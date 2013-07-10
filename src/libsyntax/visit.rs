@@ -258,6 +258,10 @@ pub fn visit_ty<E: Copy>(t: &Ty, (e, v): (E, vt<E>)) {
                 visit_ty_param_bounds(bounds, (copy e, v));
             };
         },
+        ty_simd_vec(ref ty, ex) => {
+            (v.visit_ty)(*ty, (copy e, v));
+            (v.visit_expr)(ex, (copy e, v));
+        },
         ty_fixed_length_vec(ref mt, ex) => {
             (v.visit_ty)(mt.ty, (copy e, v));
             (v.visit_expr)(ex, (copy e, v));

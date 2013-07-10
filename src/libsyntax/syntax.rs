@@ -88,4 +88,6 @@ pub mod ext {
     pub mod pipes;
 
     pub mod trace_macros;
+
+    pub mod simd;
 }

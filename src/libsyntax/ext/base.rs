@@ -202,6 +202,8 @@ pub fn syntax_expander_table() -> SyntaxEnv {
                             builtin_item_tt(ext::pipes::expand_proto));
     syntax_expanders.insert(intern(&"asm"),
                             builtin_normal_tt(ext::asm::expand_asm));
+    syntax_expanders.insert(intern(&"simd"),
+                            builtin_normal_tt(ext::simd::expand_simd));
     syntax_expanders.insert(
         intern(&"trace_macros"),
         builtin_normal_tt(ext::trace_macros::expand_trace_macros));

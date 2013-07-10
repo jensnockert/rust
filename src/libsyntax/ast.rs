@@ -736,6 +736,7 @@ pub enum ty_ {
     ty_tup(~[Ty]),
     ty_path(Path, Option<OptVec<TyParamBound>>, node_id), // for #7264; see above
     ty_mac(mac),
+    ty_simd_vec(~Ty, @expr),
     // ty_infer means the type should be inferred instead of it having been
     // specified. This should only appear at the "top level" of a type and not
     // nested in one.
