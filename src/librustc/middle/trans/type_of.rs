@@ -141,6 +141,9 @@ pub fn sizing_type_of(cx: &mut CrateContext, t: ty::t) -> Type {
         ty::ty_trait(_, _, store, _, _) => Type::opaque_trait(cx, store),
 
         ty::ty_estr(ty::vstore_fixed(size)) => Type::array(&Type::i8(), size as u64),
+        ty::ty_simd_vec(ref ty, n) => {
+          Type::vector(&sizing_type_of(cx, *ty), n as u64)
+        }
         ty::ty_evec(mt, ty::vstore_fixed(size)) => {
             Type::array(&sizing_type_of(cx, mt.ty), size as u64)
         }
@@ -262,6 +265,10 @@ pub fn type_of(cx: &mut CrateContext, t: ty::t) -> Type {
 
       ty::ty_evec(ref mt, ty::vstore_fixed(n)) => {
           Type::array(&type_of(cx, mt.ty), n as u64)
+      }
+
+      ty::ty_simd_vec(ref ty, n) => {
+        Type::vector(&type_of(cx, *ty), n as u64)
       }
 
       ty::ty_bare_fn(_) => type_of_fn_from_ty(cx, t).ptr_to(),

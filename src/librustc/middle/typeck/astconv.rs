@@ -481,10 +481,9 @@ pub fn ast_ty_to_ty<AC:AstConv, RS:region_scope + Copy + 'static>(
       ast::ty_simd_vec(ref a_ty, e) => {
         match const_eval::eval_const_expr_partial(tcx, e) {
           Ok(ref r) => {
-            let mt = ty::mt { ty: ast_ty_to_ty(this, rscope, *a_ty), mutbl: ast::m_imm };
             match *r {
-              const_eval::const_int(i) => ty::mk_evec(tcx, mt, ty::vstore_fixed(i as uint)),
-              const_eval::const_uint(i) => ty::mk_evec(tcx, mt, ty::vstore_fixed(i as uint)),
+              const_eval::const_int(i) => ty::mk_simd_vec(tcx, ast_ty_to_ty(this, rscope, *a_ty), i as uint),
+              const_eval::const_uint(i) => ty::mk_simd_vec(tcx, ast_ty_to_ty(this, rscope, *a_ty), i as uint),
               _ => {
                 tcx.sess.span_fatal(
                     ast_ty.span, "expected constant expr for vector length");

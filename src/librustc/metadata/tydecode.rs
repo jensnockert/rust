@@ -338,6 +338,14 @@ fn parse_ty(st: &mut PState, conv: conv_did) -> ty::t {
         let v = parse_vstore(st);
         return ty::mk_evec(st.tcx, mt, v);
       }
+      'w' => {
+        assert_eq!(next(st), '<');
+        let n = parse_uint(st);
+        assert_eq!(next(st), 'x');
+        let ty = parse_ty(st, conv);
+        assert_eq!(next(st), '>');
+        return ty::mk_simd_vec(st.tcx, ty, n);
+      }
       'v' => {
         let v = parse_vstore(st);
         return ty::mk_estr(st.tcx, v);

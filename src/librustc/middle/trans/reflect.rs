@@ -188,6 +188,11 @@ impl Reflector {
               let extra = extra + self.c_mt(mt);
               self.visit(~"evec_" + name, extra)
           }
+          ty::ty_simd_vec(ref ty, n) => {
+              let extra = vec::append(~[self.c_uint(n), self.c_tydesc(*ty)], self.c_size_and_align(t));
+
+              self.visit("simd_vec", extra)
+          }
           ty::ty_box(ref mt) => {
               let extra = self.c_mt(mt);
               self.visit("box", extra)

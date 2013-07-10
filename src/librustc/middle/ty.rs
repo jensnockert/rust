@@ -568,6 +568,7 @@ pub enum sty {
     ty_box(mt),
     ty_uniq(mt),
     ty_evec(mt, vstore),
+    ty_simd_vec(t, uint),
     ty_ptr(mt),
     ty_rptr(Region, mt),
     ty_bare_fn(BareFnTy),
@@ -948,6 +949,9 @@ fn mk_t(cx: ctxt, st: sty) -> t {
         flags |= rflags(r);
         flags |= get(mt.ty).flags;
       }
+      &ty_simd_vec(ref ty, _) => {
+        flags |= get(*ty).flags;
+      }
       &ty_nil | &ty_bool | &ty_int(_) | &ty_float(_) | &ty_uint(_) |
       &ty_estr(_) | &ty_type | &ty_opaque_closure_ptr(_) |
       &ty_opaque_box => (),
@@ -1150,6 +1154,10 @@ pub fn mk_evec(cx: ctxt, tm: mt, t: vstore) -> t {
     mk_t(cx, ty_evec(tm, t))
 }
 
+pub fn mk_simd_vec(cx: ctxt, ty: t, n: uint) -> t {
+    mk_t(cx, ty_simd_vec(ty, n))
+}
+
 pub fn mk_unboxed_vec(cx: ctxt, tm: mt) -> t {
     mk_t(cx, ty_unboxed_vec(tm))
 }
@@ -1237,6 +1245,9 @@ pub fn maybe_walk_ty(ty: t, f: &fn(t) -> bool) {
       ty_ptr(ref tm) | ty_rptr(_, ref tm) | ty_uniq(ref tm) => {
         maybe_walk_ty(tm.ty, f);
       }
+      ty_simd_vec(ref ty, _) => {
+        maybe_walk_ty(*ty, f);
+      }
       ty_enum(_, ref substs) | ty_struct(_, ref substs) |
       ty_trait(_, ref substs, _, _, _) => {
         for (*substs).tps.iter().advance |subty| { maybe_walk_ty(*subty, |x| f(x)); }
@@ -1295,6 +1306,9 @@ fn fold_sty(sty: &sty, fldop: &fn(t) -> t) -> sty {
         }
         ty_evec(ref tm, vst) => {
             ty_evec(mt {ty: fldop(tm.ty), mutbl: tm.mutbl}, vst)
+        }
+        ty_simd_vec(ref ty, n) => {
+            ty_simd_vec(fldop(*ty), n)
         }
         ty_enum(tid, ref substs) => {
             ty_enum(tid, fold_substs(substs, fldop))
@@ -1646,6 +1660,13 @@ pub fn type_is_scalar(ty: t) -> bool {
     }
 }
 
+pub fn type_is_simd_vec(ty: t) -> bool {
+  match get(ty).sty {
+    ty_simd_vec(*) => true,
+    _ => false
+  }
+}
+
 fn type_is_newtype_immediate(cx: ctxt, ty: t) -> bool {
     match get(ty).sty {
         ty_struct(def_id, ref substs) => {
@@ -1661,7 +1682,7 @@ fn type_is_newtype_immediate(cx: ctxt, ty: t) -> bool {
 pub fn type_is_immediate(cx: ctxt, ty: t) -> bool {
     return type_is_scalar(ty) || type_is_boxed(ty) ||
         type_is_unique(ty) || type_is_region_ptr(ty) ||
-        type_is_newtype_immediate(cx, ty);
+        type_is_newtype_immediate(cx, ty) || type_is_simd_vec(ty);
 }
 
 pub fn type_needs_drop(cx: ctxt, ty: t) -> bool {
@@ -1982,7 +2003,7 @@ pub fn type_contents(cx: ctxt, ty: t) -> TypeContents {
         let result = match get(ty).sty {
             // Scalar and unique types are sendable, freezable, and durable
             ty_nil | ty_bot | ty_bool | ty_int(_) | ty_uint(_) | ty_float(_) |
-            ty_bare_fn(_) | ty_ptr(_) => {
+            ty_bare_fn(_) | ty_ptr(_) | ty_simd_vec(_, _) => {
                 TC_NONE
             }
 
@@ -2318,7 +2339,8 @@ pub fn is_instantiable(cx: ctxt, r_ty: t) -> bool {
             ty_opaque_box |
             ty_opaque_closure_ptr(_) |
             ty_evec(_, _) |
-            ty_unboxed_vec(_) => {
+            ty_unboxed_vec(_) |
+            ty_simd_vec(_, _) => {
                 false
             }
             ty_box(ref mt) |
@@ -2479,7 +2501,7 @@ pub fn type_is_pod(cx: ctxt, ty: t) -> bool {
     match get(ty).sty {
       // Scalar types
       ty_nil | ty_bot | ty_bool | ty_int(_) | ty_float(_) | ty_uint(_) |
-      ty_type | ty_ptr(_) | ty_bare_fn(_) => result = true,
+      ty_type | ty_ptr(_) | ty_bare_fn(_) | ty_simd_vec(_, _) => result = true,
       // Boxed types
       ty_box(_) | ty_uniq(_) | ty_closure(_) |
       ty_estr(vstore_uniq) | ty_estr(vstore_box) |
@@ -3303,6 +3325,7 @@ pub fn ty_sort_str(cx: ctxt, t: t) -> ~str {
       ty_box(_) => ~"@-ptr",
       ty_uniq(_) => ~"~-ptr",
       ty_evec(_, _) => ~"vector",
+      ty_simd_vec(_, _) => ~"simd vector",
       ty_unboxed_vec(_) => ~"unboxed vector",
       ty_ptr(_) => ~"*-ptr",
       ty_rptr(_, _) => ~"&-ptr",
