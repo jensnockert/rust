@@ -1661,10 +1661,17 @@ pub fn type_is_scalar(ty: t) -> bool {
 }
 
 pub fn type_is_simd_vec(ty: t) -> bool {
-  match get(ty).sty {
-    ty_simd_vec(*) => true,
-    _ => false
-  }
+    match get(ty).sty {
+        ty_simd_vec(*) => true,
+        _ => false
+    }
+}
+
+pub fn type_is_allowed_simd_vec_element(ty: t) -> bool {
+    match get(ty).sty {
+        ty_bool | ty_int(_) | ty_float(_) | ty_uint(_) => true,
+        _ => false
+    }
 }
 
 fn type_is_newtype_immediate(cx: ctxt, ty: t) -> bool {

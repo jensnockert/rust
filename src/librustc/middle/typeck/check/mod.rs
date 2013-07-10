@@ -76,6 +76,7 @@ type parameter).
 
 */
 
+use std::io;
 
 use middle::const_eval;
 use middle::pat_util::pat_id_map;
@@ -108,7 +109,6 @@ use middle::typeck::{require_same_types, method_map, vtable_map};
 use util::common::{block_query, indenter, loop_query};
 use util::ppaux::{bound_region_ptr_to_str};
 use util::ppaux;
-
 
 use std::cast::transmute;
 use std::hashmap::HashMap;
@@ -2639,7 +2639,37 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
             match ty::get(t_1).sty {
                 // This will be looked up later on
                 ty::ty_trait(*) => (),
+                ty::ty_simd_vec(ref et_1, n_1) => {
+                    let t_e = fcx.expr_ty(e);
+                    let t_2 = structurally_resolved_type(fcx, e.span, t_e);
+                    
+                    match ty::get(t_2).sty {
+                        ty::ty_simd_vec(ref et_2, n_2) => {
+                            /* TODO: Should check types, n_1 * size_of(et_1) == n_2 * size_of(et_2) */
 
+                            fcx.write_ty(id, t_1);
+                        }
+                        ty::ty_evec(ref mt, ty::vstore_fixed(n_2)) => {
+                            /* TODO: Should check types,
+                                      - n_1 * size_of(et_1) == n_2 * size_of(et_2)
+                                      - ty::type_is_allowed_simd_vec_element(et_2) */
+
+                            fcx.write_ty(id, t_1);
+                        }
+                        _ => {
+                            if type_is_allowed_simd_vec_element(fcx,expr.span, t_e) {
+                                /* TODO: Should really check et_1 == t_2 */
+                                fcx.write_ty(id, t_1);
+                            } else {
+                                fcx.type_error_message(expr.span, |actual| {
+                                    fmt!("disallowed broadcast: `%s` as `%s` (element type not allowed in SIMD vector)",
+                                         actual,
+                                         fcx.infcx().ty_to_str(t_1))
+                                }, t_e, None);
+                            }
+                        }
+                    }
+                }
                 _ => {
                     if ty::type_is_nil(t_e) {
                         fcx.type_error_message(expr.span, |actual| {
@@ -3372,6 +3402,16 @@ pub fn type_is_integral(fcx: @mut FnCtxt, sp: span, typ: ty::t) -> bool {
 pub fn type_is_scalar(fcx: @mut FnCtxt, sp: span, typ: ty::t) -> bool {
     let typ_s = structurally_resolved_type(fcx, sp, typ);
     return ty::type_is_scalar(typ_s);
+}
+
+pub fn type_is_simd_vec(fcx: @mut FnCtxt, sp: span, typ: ty::t) -> bool {
+    let typ_s = structurally_resolved_type(fcx, sp, typ);
+    return ty::type_is_simd_vec(typ_s);
+}
+
+pub fn type_is_allowed_simd_vec_element(fcx: @mut FnCtxt, sp: span, typ: ty::t) -> bool {
+    let typ_s = structurally_resolved_type(fcx, sp, typ);
+    return ty::type_is_allowed_simd_vec_element(typ_s);
 }
 
 pub fn type_is_unsafe_ptr(fcx: @mut FnCtxt, sp: span, typ: ty::t) -> bool {

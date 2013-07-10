@@ -1579,19 +1579,27 @@ pub enum cast_kind {
     cast_integral,
     cast_float,
     cast_enum,
+    cast_evec,
+    cast_simd_vec,
     cast_other,
 }
 
 pub fn cast_type_kind(t: ty::t) -> cast_kind {
     match ty::get(t).sty {
-        ty::ty_float(*)   => cast_float,
-        ty::ty_ptr(*)     => cast_pointer,
-        ty::ty_rptr(*)    => cast_pointer,
-        ty::ty_int(*)     => cast_integral,
-        ty::ty_uint(*)    => cast_integral,
-        ty::ty_bool       => cast_integral,
-        ty::ty_enum(*)    => cast_enum,
-        _                 => cast_other
+        ty::ty_float(*) => cast_float,
+        ty::ty_ptr(*)   => cast_pointer,
+        ty::ty_rptr(*)  => cast_pointer,
+        ty::ty_int(*)   => cast_integral,
+        ty::ty_uint(*)  => cast_integral,
+        ty::ty_bool     => cast_integral,
+        ty::ty_enum(*)  => cast_enum,
+        ty::ty_simd_vec(*) => {
+            cast_simd_vec
+        }
+        ty::ty_evec(_, ty::vstore_fixed(_)) => {
+            cast_evec
+        }
+        _                   => cast_other
     }
 }
 
@@ -1638,6 +1646,27 @@ fn trans_imm_cast(bcx: block, expr: @ast::expr,
             }
             (cast_pointer, cast_pointer) => {
                 PointerCast(bcx, llexpr, ll_t_out)
+            }
+            (cast_integral, cast_simd_vec) | (cast_float, cast_simd_vec) => {
+                let n = match ty::get(t_out).sty {
+                    ty::ty_simd_vec(_, n) => n,
+                    _                     => ccx.sess.bug("translating unsupported simd broadcast.")
+                };
+
+                /* TODO: Check types t_out should be <n * t_in> */
+
+                let indices = vec::from_elem(n, C_i32(0));
+                let mask = unsafe { llvm::LLVMConstVector(vec::raw::to_ptr(indices), n as u32) }; /* TODO: Should add this to rust API */
+
+                let value = BitCast(bcx, llexpr, Type::vector(&ll_t_in, 1));
+
+                ShuffleVector(bcx, value, value, mask)
+            }
+            (cast_simd_vec, cast_simd_vec) => {
+                BitCast(bcx, llexpr, ll_t_out)
+            }
+            (cast_evec, cast_simd_vec) => {
+                Load(bcx, BitCast(bcx, llexpr, Type::ptr(ll_t_out)))
             }
             (cast_enum, cast_integral) |
             (cast_enum, cast_float) => {
