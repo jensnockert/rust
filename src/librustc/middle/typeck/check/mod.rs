@@ -2642,27 +2642,67 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                 ty::ty_simd_vec(ref et_1, n_1) => {
                     let t_e = fcx.expr_ty(e);
                     let t_2 = structurally_resolved_type(fcx, e.span, t_e);
-                    
+
+                    io::println(fmt!("SIMD Cast: %? %?", ty::get(t_e).sty, ty::get(t_2).sty));
+
                     match ty::get(t_2).sty {
-                        ty::ty_simd_vec(ref et_2, n_2) => {
-                            /* TODO: Should check types, n_1 * size_of(et_1) == n_2 * size_of(et_2) */
+                        ty::ty_simd_vec(ref et_e, n_2) => {
+                            let et_2 = structurally_resolved_type(fcx, e.span, *et_e);
 
-                            fcx.write_ty(id, t_1);
-                        }
-                        ty::ty_evec(ref mt, ty::vstore_fixed(n_2)) => {
-                            /* TODO: Should check types,
-                                      - n_1 * size_of(et_1) == n_2 * size_of(et_2)
-                                      - ty::type_is_allowed_simd_vec_element(et_2) */
-
-                            fcx.write_ty(id, t_1);
-                        }
-                        _ => {
-                            if type_is_allowed_simd_vec_element(fcx,expr.span, t_e) {
-                                /* TODO: Should really check et_1 == t_2 */
+                            /* TODO: Fix this the correct way, but I (jensnockert) have no idea how to do it */
+                            fn size(t: &ty::t) -> int {
+                                match ty::get(*t).sty {
+                                    ty::ty_int(ast::ty_i8) => 1,
+                                    ty::ty_int(ast::ty_i16) => 2,
+                                    ty::ty_int(ast::ty_i32) => 4,
+                                    ty::ty_int(ast::ty_i64) => 8,
+                                    ty::ty_uint(ast::ty_u8) => 1,
+                                    ty::ty_uint(ast::ty_u16) => 2,
+                                    ty::ty_uint(ast::ty_u32) => 4,
+                                    ty::ty_uint(ast::ty_u64) => 8,
+                                    ty::ty_float(ast::ty_f32) => 4,
+                                    ty::ty_float(ast::ty_f64) => 8,
+                                    _ => -1
+                                }
+                            }
+                            
+                            let (s_1, s_2) = ((n_1 as int) * size(et_1), (n_2 as int) * size(&et_2));
+                            
+                            if s_1 < 1 || s_2 < 1 {
+                                fcx.type_error_message(expr.span, |actual| {
+                                    fmt!("disallowed cast: `%s` as `%s` (could not calculate vector size)",
+                                         actual,
+                                         fcx.infcx().ty_to_str(t_1))
+                                }, t_e, None);
+                            } else if s_1 == s_2 {
                                 fcx.write_ty(id, t_1);
                             } else {
                                 fcx.type_error_message(expr.span, |actual| {
-                                    fmt!("disallowed broadcast: `%s` as `%s` (element type not allowed in SIMD vector)",
+                                    fmt!("disallowed cast: `%s` as `%s` (size does not match)",
+                                         actual,
+                                         fcx.infcx().ty_to_str(t_1))
+                                }, t_e, None);
+                            }
+                        }
+                        ty::ty_evec(ref mt, ty::vstore_fixed(n_2)) => {
+                            let et_2 = structurally_resolved_type(fcx, e.span, mt.ty);
+
+                            if ty::get(*et_1).sty == ty::get(et_2).sty && n_1 == n_2 {
+                                fcx.write_ty(id, t_1);
+                            } else {
+                                fcx.type_error_message(expr.span, |actual| {
+                                    fmt!("disallowed cast: `%s` as `%s` (element or length mismatch)",
+                                         actual,
+                                         fcx.infcx().ty_to_str(t_1))
+                                }, t_e, None);
+                            }
+                        }
+                        _ => {
+                            if ty::get(*et_1).sty == ty::get(t_2).sty {
+                                fcx.write_ty(id, t_1);
+                            } else {
+                                fcx.type_error_message(expr.span, |actual| {
+                                    fmt!("disallowed cast: `%s` as `%s` (element mismatch)",
                                          actual,
                                          fcx.infcx().ty_to_str(t_1))
                                 }, t_e, None);
