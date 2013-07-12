@@ -1805,6 +1805,15 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                     None => ()
                 }
             }
+            ty::ty_simd_vec(ref et, _) => {
+                match ty::simd_vec_parse_accessor(base_t, tcx.sess.str_of(field)) {
+                    Some(indices) => {
+                        fcx.write_ty(expr.id, ty::mk_simd_vec(tcx, *et, indices.len()));
+                        return bot;
+                    }
+                    None => ()
+                }
+            }
             _ => ()
         }
 
@@ -2642,8 +2651,6 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                 ty::ty_simd_vec(ref et_1, n_1) => {
                     let t_e = fcx.expr_ty(e);
                     let t_2 = structurally_resolved_type(fcx, e.span, t_e);
-
-                    io::println(fmt!("SIMD Cast: %? %?", ty::get(t_e).sty, ty::get(t_2).sty));
 
                     match ty::get(t_2).sty {
                         ty::ty_simd_vec(ref et_e, n_2) => {

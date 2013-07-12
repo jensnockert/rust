@@ -478,25 +478,8 @@ pub fn ast_ty_to_ty<AC:AstConv, RS:region_scope + Copy + 'static>(
           }
         }
       }
-      ast::ty_simd_vec(ref a_ty, e) => {
-        match const_eval::eval_const_expr_partial(tcx, e) {
-          Ok(ref r) => {
-            match *r {
-              const_eval::const_int(i) => ty::mk_simd_vec(tcx, ast_ty_to_ty(this, rscope, *a_ty), i as uint),
-              const_eval::const_uint(i) => ty::mk_simd_vec(tcx, ast_ty_to_ty(this, rscope, *a_ty), i as uint),
-              _ => {
-                tcx.sess.span_fatal(
-                    ast_ty.span, "expected constant expr for vector length");
-              }
-            }
-          }
-          Err(ref r) => {
-            tcx.sess.span_fatal(
-                ast_ty.span,
-                fmt!("expected constant expr for vector length: %s",
-                     *r));
-          }
-        }
+      ast::ty_simd_vec(ref a_ty, n) => {
+         ty::mk_simd_vec(tcx, ast_ty_to_ty(this, rscope, *a_ty), n)
       }
       ast::ty_fixed_length_vec(ref a_mt, e) => {
         match const_eval::eval_const_expr_partial(tcx, e) {

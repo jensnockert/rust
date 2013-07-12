@@ -15,36 +15,23 @@
  */
 
 use ast;
-use opt_vec;
 
 use codemap::span;
 use ext::base;
+use ext::build::AstBuilder;
 use parse;
-use parse::token;
-
-use std::vec;
 
 pub fn expand_simd(cx: @base::ExtCtxt, sp: span, tts: &[ast::token_tree]) -> base::MacResult {
-    let parser = parse::new_parser_from_tts(cx.parse_sess(), cx.cfg(), vec::to_owned(tts));
+    let parser = parse::new_parser_from_tts(cx.parse_sess(), cx.cfg(), tts.to_owned());
 
-    let ident = parser.parse_ident();
-    parser.expect(&token::COLON);
-    let ty = parser.parse_ty(false); //Parameter is useless, apparently
-    parser.expect(&token::BINOP(token::STAR));
-    let expr = parser.parse_expr();
+    let ident = parser.parse_ident(); parser.expect(&parse::token::COLON);
+    let ty = parser.parse_ty(false); parser.expect(&parse::token::BINOP(parse::token::STAR));
+    let lit = parser.parse_lit();
 
-    let vector = ast::Ty {
-        id: cx.next_id(),
-        node: ast::ty_simd_vec(~ty, expr),
-        span: sp
-    };
-
-    base::MRItem(@ast::item {
-        ident: ident,
-        attrs: ~[],
-        id: cx.next_id(),
-        node: ast::item_ty(vector, ast::Generics { lifetimes: opt_vec::Empty, ty_params: opt_vec::Empty }),
-        span: sp,
-        vis: ast::inherited
-    })
+    match lit.node {
+        ast::lit_int_unsuffixed(n) => {
+            base::MRItem(cx.item_ty(sp, ident, cx.ty(sp, ast::ty_simd_vec(~ty, n as uint))))
+        }
+        _ => cx.span_bug(lit.span, "SIMD vector length needs to be an unprefixed integer literal")
+    }
 }

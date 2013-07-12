@@ -1696,6 +1696,68 @@ pub fn type_needs_drop(cx: ctxt, ty: t) -> bool {
     type_contents(cx, ty).needs_drop(cx)
 }
 
+fn simd_vec_point_accessor_index(name: char) -> int {
+    match name {
+        'x' | 'r' => 0,
+        'y' | 'g' => 1,
+        'z' | 'b' => 2,
+        'w' | 'a' => 3,
+        _ => -1
+    }
+}
+
+fn simd_vec_numeric_accessor_index(name: char) -> int {
+    match name {
+        '0' => 0, '1' => 1, '2' => 2, '3' => 3, '4' => 4,
+        '5' => 5, '6' => 6, '7' => 7, '8' => 8, '9' => 9,
+        'a' | 'A' => 10, 'b' | 'B' => 11, 'c' | 'C' => 12,
+        'd' | 'D' => 13, 'e' | 'E' => 14, 'f' | 'F' => 15,
+        _ => -1
+    }
+}
+
+pub fn simd_vec_parse_accessor(ty: t, name: &str) -> Option<~[int]> {
+    let count = match get(ty).sty {
+        ty_simd_vec(_, n) => n,
+        _ => fail!("simd_vec_parse_accessor called on non-simd_vec type")
+    };
+
+    let indices = do vec::build() |push| {
+        match name {
+            "hi" | "high" => {
+                for uint::range(0, count) |i| { if (i > count / 2) { push(i as int) } }
+            }
+            "lo" | "low" => {
+                for uint::range(0, count) |i| { if (i < count / 2) { push(i as int) } }
+            }
+            "even" => {
+                for uint::range(0, count) |i| { if (i % 2 == 0) { push(i as int) } }
+            }
+            "odd" => {
+                for uint::range(0, count) |i| { if (i % 2 == 1) { push(i as int) } }
+            }
+            _ => {
+                match name.char_at(0) {
+                    's' => {
+                        for uint::range(1, name.len()) |i| { push(simd_vec_numeric_accessor_index(name.char_at(i))) }
+                    }
+                    _ => {
+                        for uint::range(0, name.len()) |i| { push(simd_vec_point_accessor_index(name.char_at(i))) }
+                    }
+                }
+            }
+        }
+    };
+
+    for uint::range(0, indices.len()) |i| {
+        if indices[i] < 0 {
+            return None
+        }
+    }
+
+    return Some(indices);
+}
+
 // Some things don't need cleanups during unwinding because the
 // task can free them all at once later. Currently only things
 // that only contain scalars and shared boxes can avoid unwind

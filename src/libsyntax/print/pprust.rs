@@ -419,12 +419,10 @@ pub fn print_type(s: @ps, ty: &ast::Ty) {
                       Some(&generics), None);
       }
       ast::ty_path(ref path, ref bounds, _) => print_bounded_path(s, path, bounds),
-      ast::ty_simd_vec(ref t, v) => {
+      ast::ty_simd_vec(ref t, n) => {
         word(s.s, "simd!(");
         print_type(s, *t);
-        word(s.s, " * ");
-        print_expr(s, v);
-        word(s.s, ")");
+        word(s.s, fmt!(" * %u)", n));
       }
       ast::ty_fixed_length_vec(ref mt, v) => {
         word(s.s, "[");
@@ -542,15 +540,12 @@ pub fn print_item(s: @ps, item: &ast::item) {
         ibox(s, 0u);
 
         match ty.node {
-          ast::ty_simd_vec(ref t, v) => { /* TODO: Vectors should parse as `type u8x16 = simd!(u8 * 16)` */
+          ast::ty_simd_vec(ref t, n) => { /* TODO: Vectors should parse as `type u8x16 = simd!(u8 * 16)` */
             word(s.s, "simd!(");
             print_ident(s, item.ident);
             word_space(s, ":");
             print_type(s, *t);
-            space(s.s);
-            word_space(s, "*");
-            print_expr(s, v);
-            word(s.s, ")");
+            word(s.s, fmt!(" * %u)", n));
           }
           _ => {
             word_nbsp(s, visibility_qualified(item.vis, "type"));
