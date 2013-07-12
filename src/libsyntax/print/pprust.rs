@@ -546,6 +546,7 @@ pub fn print_item(s: @ps, item: &ast::item) {
             word_space(s, ":");
             print_type(s, *t);
             word(s.s, fmt!(" * %u)", n));
+            end(s); // end the inner ibox
           }
           _ => {
             word_nbsp(s, visibility_qualified(item.vis, "type"));
