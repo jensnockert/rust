@@ -1808,7 +1808,12 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
             ty::ty_simd_vec(ref et, _) => {
                 match ty::simd_vec_parse_accessor(base_t, tcx.sess.str_of(field)) {
                     Some(indices) => {
-                        fcx.write_ty(expr.id, ty::mk_simd_vec(tcx, *et, indices.len()));
+                        if indices.len() == 1 {
+                            fcx.write_ty(expr.id, *et);
+                        } else {
+                            fcx.write_ty(expr.id, ty::mk_simd_vec(tcx, *et, indices.len()));
+                        }
+
                         return bot;
                     }
                     None => ()
