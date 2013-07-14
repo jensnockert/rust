@@ -121,7 +121,7 @@ fn root(datum: &Datum,
     // because sometimes we root on one path but not another.
     // See e.g. #4904.
     let scratch = scratch_datum(bcx, datum.ty, true);
-    datum.copy_to_datum(bcx, INIT, scratch);
+    datum.copy_to_datum(bcx, INIT, copy scratch);
     let cleanup_bcx = find_bcx_for_scope(bcx, root_info.scope);
     add_clean_temp_mem_in_scope(cleanup_bcx, root_info.scope, scratch.val, scratch.ty);
 

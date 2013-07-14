@@ -1762,7 +1762,7 @@ pub fn bind_irrefutable_pat(bcx: block,
                 let datum = Datum {val: val, ty: binding_ty,
                                    mode: ByRef(RevokeClean)};
                 let scratch = scratch_datum(bcx, binding_ty, false);
-                datum.copy_to_datum(bcx, INIT, scratch);
+                datum.copy_to_datum(bcx, INIT, copy scratch);
                 match binding_mode {
                     BindLocal => {
                         bcx.fcx.lllocals.insert(pat.id, scratch.val);

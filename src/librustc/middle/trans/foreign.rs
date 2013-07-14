@@ -788,7 +788,7 @@ pub fn trans_intrinsic(ccx: @mut CrateContext,
             let arg_vals = ~[frameaddress_val];
             bcx = trans_call_inner(
                 bcx, None, fty, ty::mk_nil(),
-                |bcx| Callee {bcx: bcx, data: Closure(datum)},
+                |bcx| Callee {bcx: bcx, data: Closure(copy datum)},
                 ArgVals(arg_vals), Ignore, DontAutorefArg);
         }
         "morestack_addr" => {

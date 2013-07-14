@@ -16,6 +16,7 @@
  * closure.
  */
 
+use std::libc;
 use std::vec;
 
 use back::abi;
@@ -608,7 +609,7 @@ pub fn trans_call_inner(in_cx: block,
         };
 
         let (llfn, llenv) = unsafe {
-            match callee.data {
+            match copy callee.data {
                 Fn(d) => {
                     (d.llfn, llvm::LLVMGetUndef(Type::opaque_box(ccx).ptr_to().to_ref()))
                 }
@@ -644,7 +645,7 @@ pub fn trans_call_inner(in_cx: block,
 
         // Now that the arguments have finished evaluating, we need to revoke
         // the cleanup for the self argument
-        match callee.data {
+        match copy callee.data {
             Method(d) => {
                 for d.temp_cleanup.iter().advance |&v| {
                     revoke_clean(bcx, v);
@@ -847,7 +848,7 @@ pub fn trans_arg_expr(bcx: block,
             }
         }
     };
-    let arg_datum = arg_datumblock.datum;
+    let arg_datum = copy arg_datumblock.datum;
     let bcx = arg_datumblock.bcx;
 
     debug!("   arg datum: %s", arg_datum.to_str(bcx.ccx()));
@@ -881,12 +882,12 @@ pub fn trans_arg_expr(bcx: block,
                         //    &arg_expr.id);
                         debug!("by ref arg with type %s, storing to scratch",
                                bcx.ty_to_str(arg_datum.ty));
-                        let scratch = scratch_datum(bcx, arg_datum.ty, false);
+                        let scratch = copy scratch_datum(bcx, arg_datum.ty, false);
 
                         arg_datum.store_to_datum(bcx,
                                                  arg_expr.id,
                                                  INIT,
-                                                 scratch);
+                                                 copy scratch);
 
                         // Technically, ownership of val passes to the callee.
                         // However, we must cleanup should we fail before the
@@ -906,7 +907,7 @@ pub fn trans_arg_expr(bcx: block,
                             arg_datum.store_to_datum(bcx,
                                                      arg_expr.id,
                                                      INIT,
-                                                     scratch);
+                                                     copy scratch);
 
                             // Technically, ownership of val passes to the callee.
                             // However, we must cleanup should we fail before the
@@ -917,12 +918,38 @@ pub fn trans_arg_expr(bcx: block,
                             match scratch.appropriate_mode(bcx.tcx()) {
                                 ByValue => val = Load(bcx, scratch.val),
                                 ByRef(_) => val = scratch.val,
+                                ByIndex(ref indices) => {
+                                    let ll_idx = indices.map(|i| { C_i32(*i as i32) });
+
+                                    val = if ll_idx.len() == 1 {
+                                        ExtractElement(bcx, scratch.val, ll_idx[0])
+                                    } else {
+                                        let mask = unsafe {
+                                            llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
+                                        };
+
+                                        ShuffleVector(bcx, scratch.val, scratch.val, mask)
+                                    }
+                                }
                             }
                         } else {
                             debug!("by copy arg with type %s", bcx.ty_to_str(arg_datum.ty));
                             match arg_datum.mode {
                                 ByRef(_) => val = Load(bcx, arg_datum.val),
                                 ByValue => val = arg_datum.val,
+                                ByIndex(ref indices) => {
+                                    let ll_idx = indices.map(|i| { C_i32(*i as i32) });
+
+                                    if ll_idx.len() == 1 {
+                                        val = ExtractElement(bcx, arg_datum.val, ll_idx[0])
+                                    } else {
+                                        let mask = unsafe {
+                                            llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
+                                        };
+
+                                        val = ShuffleVector(bcx, arg_datum.val, arg_datum.val, mask)
+                                    }
+                                }
                             }
                         }
                     }

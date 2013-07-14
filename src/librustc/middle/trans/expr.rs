@@ -860,30 +860,16 @@ fn trans_lvalue_unadjusted(bcx: block, expr: @ast::expr) -> DatumBlock {
         let base_datum = unpack_datum!(bcx, trans_to_datum(bcx, base));
         
         match ty::get(base_datum.ty).sty {
-            ty::ty_simd_vec(ref et, n) => {
+            ty::ty_simd_vec(ref et, _) => {
                 match ty::simd_vec_parse_accessor(base_datum.ty, bcx.tcx().sess.str_of(field)) {
                     Some(indices) => {
-                        if indices.len() == 1 {
-                            let value = ExtractElement(bcx, base_datum.to_value_llval(bcx), C_i32(indices[0] as i32));
-
-                            DatumBlock {
-                                datum: Datum { val: value, mode: ByValue, ty: ty::mk_simd_vec(bcx.tcx(), *et, indices.len()) },
-                                bcx: bcx
-                            }
-                        } else {
-                            let value = base_datum.to_value_llval(bcx);
-
-                            let mask = unsafe {
-                                let ll_idx = indices.map(|i| { C_i32(*i as i32) });
-                                llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), indices.len() as u32)
-                            };
-                            
-                            let r = ShuffleVector(bcx, value, value, mask);
-
-                            DatumBlock {
-                                datum: Datum { val: r, mode: ByValue, ty: ty::mk_simd_vec(bcx.tcx(), *et, indices.len()) },
-                                bcx: bcx
-                            }
+                        DatumBlock {
+                            datum: Datum {
+                                val: base_datum.to_value_llval(bcx),
+                                mode: ByIndex(copy indices),
+                                ty: ty::mk_simd_vec(bcx.tcx(), *et, indices.len())
+                            },
+                            bcx: bcx
                         }
                     }
                     None => {

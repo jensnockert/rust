@@ -104,10 +104,16 @@ use middle::ty;
 use util::common::indenter;
 use util::ppaux::ty_to_str;
 
+use std::io;
+use std::libc;
 use std::uint;
+use std::vec;
+
 use syntax::ast;
 use syntax::codemap::span;
 use syntax::parse::token::special_idents;
+
+use llvm;
 
 #[deriving(Eq)]
 pub enum CopyAction {
@@ -142,15 +148,23 @@ pub enum DatumMode {
 
     /// `val` is the actual value (*only used for immediates* like ints, ptrs)
     ByValue,
+
+    /// `val` is a SIMD vector, and the value only be poked in with
+    /// extractvalue and insertvalue to the right indices.
+    ByIndex(~[int])
 }
 
 impl DatumMode {
     pub fn is_by_ref(&self) -> bool {
-        match *self { ByRef(_) => true, ByValue => false }
+        match *self { ByRef(_) => true, ByValue => false, ByIndex(_) => false }
     }
 
     pub fn is_by_value(&self) -> bool {
-        match *self { ByRef(_) => false, ByValue => true }
+        match *self { ByRef(_) => false, ByValue => true, ByIndex(_) => false }
+    }
+
+    pub fn is_by_index(&self) -> bool {
+        match *self { ByRef(_) => false, ByValue => false, ByIndex(_) => true }
     }
 }
 
@@ -297,7 +311,7 @@ impl Datum {
                         self.copy_to_no_check(bcx, action, dst)
                     }
                 }
-                ByValue => {
+                _ => {
                     self.copy_to_no_check(bcx, action, dst)
                 }
             }
@@ -330,6 +344,19 @@ impl Datum {
             ByRef(_) => {
                 memcpy_ty(bcx, dst, self.val, self.ty);
             }
+            ByIndex(ref indices) => {
+                let ll_idx = indices.map(|i| { C_i32(*i as i32) });
+
+                if ll_idx.len() == 1 {
+                    Store(bcx, ExtractElement(bcx, self.val, ll_idx[0]), dst)
+                } else {
+                    let mask = unsafe {
+                        llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
+                    };
+
+                    Store(bcx, ShuffleVector(bcx, self.val, self.val, mask), dst)
+                }
+            }
         }
 
         return glue::take_ty(bcx, dst, self.ty);
@@ -361,6 +388,19 @@ impl Datum {
             ByValue => {
                 Store(bcx, self.val, dst);
             }
+            ByIndex(ref indices) => {
+                let ll_idx = indices.map(|i| { C_i32(*i as i32) });
+
+                if ll_idx.len() == 1 {
+                    Store(bcx, ExtractElement(bcx, self.val, ll_idx[0]), dst)
+                } else {
+                    let mask = unsafe {
+                        llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
+                    };
+
+                    Store(bcx, ShuffleVector(bcx, self.val, self.val, mask), dst)
+                }
+            }
         }
 
         self.cancel_clean(bcx);
@@ -375,7 +415,7 @@ impl Datum {
          */
 
         match self.mode {
-            ByValue => {
+            ByValue | ByIndex(_) => {
                 add_clean_temp_immediate(bcx, self.val, self.ty);
             }
             ByRef(RevokeClean) => {
@@ -392,7 +432,8 @@ impl Datum {
         if ty::type_needs_drop(bcx.tcx(), self.ty) {
             match self.mode {
                 ByValue |
-                ByRef(RevokeClean) => {
+                ByRef(RevokeClean) |
+                ByIndex(_) => {
                     revoke_clean(bcx, self.val);
                 }
                 ByRef(ZeroMem) => {
@@ -422,10 +463,25 @@ impl Datum {
          * it will not live longer than the current datum. */
 
         match self.mode {
-            ByValue => *self,
-            ByRef(_) => {
-                Datum {val: self.to_value_llval(bcx), mode: ByValue,
-                       ty: self.ty}
+            ByIndex(ref indices) => {
+                let ll_idx = indices.map(|i| { C_i32(*i as i32) });
+
+                Datum {
+                    val: if ll_idx.len() == 1 {
+                        ExtractElement(bcx, self.val, ll_idx[0])
+                    } else {
+                        let mask = unsafe {
+                            llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
+                        };
+
+                        ShuffleVector(bcx, self.val, self.val, mask)
+                    },
+                    mode: ByValue,
+                    ty: self.ty
+                }
+            }
+            ByValue | ByRef(_) => {
+                Datum { val: self.to_value_llval(bcx), mode: ByValue, ty: self.ty }
             }
         }
     }
@@ -447,6 +503,19 @@ impl Datum {
                         Load(bcx, self.val)
                     }
                 }
+                ByIndex(ref indices) => {
+                    let ll_idx = indices.map(|i| { C_i32(*i as i32) });
+
+                    if ll_idx.len() == 1 {
+                        ExtractElement(bcx, self.val, ll_idx[0])
+                    } else {
+                        let mask = unsafe {
+                            llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
+                        };
+
+                        ShuffleVector(bcx, self.val, self.val, mask)
+                    }
+                }
             }
         }
     }
@@ -460,10 +529,11 @@ impl Datum {
          */
 
         match self.mode {
-            ByRef(_) => *self,
-            ByValue => {
-                Datum {val: self.to_ref_llval(bcx), mode: ByRef(RevokeClean),
-                       ty: self.ty}
+            ByRef(_) => {
+                Datum { val: self.val, mode: copy self.mode, ty: self.ty }
+            }
+            ByValue | ByIndex(_) => {
+                Datum { val: self.to_ref_llval(bcx), mode: ByRef(RevokeClean), ty: self.ty }
             }
         }
     }
@@ -479,6 +549,23 @@ impl Datum {
                     Store(bcx, self.val, slot);
                     slot
                 }
+            }
+            ByIndex(ref indices) => {
+                let ll_idx = indices.map(|i| { C_i32(*i as i32) });
+
+                let val = if ll_idx.len() == 1 {
+                    ExtractElement(bcx, self.val, ll_idx[0])
+                } else {
+                    let mask = unsafe {
+                        llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
+                    };
+
+                    ShuffleVector(bcx, self.val, self.val, mask)
+                };
+
+                let slot = alloc_ty(bcx, self.ty);
+                Store(bcx, val, slot);
+                slot
             }
         }
     }
@@ -499,7 +586,7 @@ impl Datum {
             // the zero?) so we have to spill them. Add a temp cleanup
             // for this spilled value and cancel the cleanup on this
             // current value.
-            ByValue => {
+            ByValue | ByIndex(_) => {
                 let slot = self.to_ref_llval(bcx);
                 self.cancel_clean(bcx);
                 add_clean_temp_mem(bcx, slot, self.ty);
@@ -520,7 +607,7 @@ impl Datum {
          * Yields an llvalue with the `appropriate_mode()`. */
 
         match self.appropriate_mode(bcx.tcx()) {
-            ByValue => self.to_value_llval(bcx),
+            ByValue | ByIndex(_) => self.to_value_llval(bcx),
             ByRef(_) => self.to_ref_llval(bcx)
         }
     }
@@ -531,7 +618,7 @@ impl Datum {
          * Yields a datum with the `appropriate_mode()`. */
 
         match self.appropriate_mode(bcx.tcx()) {
-            ByValue => self.to_value_datum(bcx),
+            ByValue | ByIndex(_) => self.to_value_datum(bcx),
             ByRef(_) => self.to_ref_datum(bcx)
         }
     }
@@ -557,7 +644,7 @@ impl Datum {
 
         return match self.mode {
             ByRef(_) => glue::drop_ty(bcx, self.val, self.ty),
-            ByValue => glue::drop_ty_immediate(bcx, self.val, self.ty)
+            ByValue | ByIndex(_) => glue::drop_ty_immediate(bcx, self.val, self.ty)
         };
     }
 
@@ -654,11 +741,11 @@ impl Datum {
                             bcx
                         )
                     }
-                    ByValue => {
+                    ByValue | ByIndex(_) => {
                         // Actually, this case cannot happen right
-                        // now, because enums are never immediate.
+                        // now, because enums are never immediate / vectors.
                         assert!(ty::type_is_immediate(bcx.tcx(), ty));
-                        (Some(Datum {ty: ty, ..*self}), bcx)
+                        (Some(Datum { val: self.val, mode: copy self.mode, ty: ty }), bcx)
                     }
                 };
             }
@@ -698,6 +785,10 @@ impl Datum {
                             }),
                             bcx
                         )
+                    }
+                    ByIndex(_) => {
+                        assert!(ty::type_is_simd_vec(ty));
+                        bcx.ccx().sess.span_bug(span, "Should not shuffle structs…");
                     }
                 }
             }
@@ -739,7 +830,7 @@ impl Datum {
                expr_id, max, self.to_str(bcx.ccx()));
         let _indenter = indenter();
 
-        let mut datum = *self;
+        let mut datum = copy *self;
         let mut derefs = 0u;
         let mut bcx = bcx;
         while derefs < max {
@@ -747,7 +838,7 @@ impl Datum {
             match datum.try_deref(bcx, span, expr_id, derefs, true) {
                 (None, new_bcx) => { bcx = new_bcx; break }
                 (Some(datum_deref), new_bcx) => {
-                    datum = datum_deref;
+                    datum = copy datum_deref;
                     bcx = new_bcx;
                 }
             }
@@ -801,12 +892,12 @@ impl Datum {
 impl DatumBlock {
     pub fn unpack(&self, bcx: &mut block) -> Datum {
         *bcx = self.bcx;
-        return self.datum;
+        return copy self.datum;
     }
 
     pub fn assert_by_ref(&self) -> DatumBlock {
         assert!(self.datum.mode.is_by_ref());
-        *self
+        copy *self
     }
 
     pub fn drop_val(&self) -> block {
