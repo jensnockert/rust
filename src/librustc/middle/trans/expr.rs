@@ -858,16 +858,52 @@ fn trans_lvalue_unadjusted(bcx: block, expr: @ast::expr) -> DatumBlock {
         let _icx = push_ctxt("trans_rec_field");
 
         let base_datum = unpack_datum!(bcx, trans_to_datum(bcx, base));
-        let repr = adt::represent_type(bcx.ccx(), base_datum.ty);
-        do with_field_tys(bcx.tcx(), base_datum.ty, None) |discr, field_tys| {
-            let ix = ty::field_idx_strict(bcx.tcx(), field, field_tys);
-            DatumBlock {
-                datum: do base_datum.get_element(bcx,
-                                                 field_tys[ix].mt.ty,
-                                                 ZeroMem) |srcval| {
-                    adt::trans_field_ptr(bcx, repr, srcval, discr, ix)
-                },
-                bcx: bcx
+        
+        match ty::get(base_datum.ty).sty {
+            ty::ty_simd_vec(ref et, n) => {
+                match ty::simd_vec_parse_accessor(base_datum.ty, bcx.tcx().sess.str_of(field)) {
+                    Some(indices) => {
+                        if indices.len() == 1 {
+                            let value = ExtractElement(bcx, base_datum.to_value_llval(bcx), C_i32(indices[0] as i32));
+
+                            DatumBlock {
+                                datum: Datum { val: value, mode: ByValue, ty: ty::mk_simd_vec(bcx.tcx(), *et, indices.len()) },
+                                bcx: bcx
+                            }
+                        } else {
+                            let value = base_datum.to_value_llval(bcx);
+
+                            let mask = unsafe {
+                                let ll_idx = indices.map(|i| { C_i32(*i as i32) });
+                                llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), indices.len() as u32)
+                            };
+                            
+                            let r = ShuffleVector(bcx, value, value, mask);
+
+                            DatumBlock {
+                                datum: Datum { val: r, mode: ByValue, ty: ty::mk_simd_vec(bcx.tcx(), *et, indices.len()) },
+                                bcx: bcx
+                            }
+                        }
+                    }
+                    None => {
+                        bcx.tcx().sess.span_bug(base.span, fmt!("trans_rec_field reached fall-through case: %?", base.node));
+                    }
+                }
+            }
+            _ => {
+                let repr = adt::represent_type(bcx.ccx(), base_datum.ty);
+                do with_field_tys(bcx.tcx(), base_datum.ty, None) |discr, field_tys| {
+                    let ix = ty::field_idx_strict(bcx.tcx(), field, field_tys);
+                    DatumBlock {
+                        datum: do base_datum.get_element(bcx,
+                                                         field_tys[ix].mt.ty,
+                                                         ZeroMem) |srcval| {
+                            adt::trans_field_ptr(bcx, repr, srcval, discr, ix)
+                        },
+                        bcx: bcx
+                    }
+                }
             }
         }
     }
@@ -1655,12 +1691,7 @@ fn trans_imm_cast(bcx: block, expr: @ast::expr,
 
                 /* TODO: Check types t_out should be <n * t_in> */
 
-                let indices = vec::from_elem(n, C_i32(0));
-                let mask = unsafe { llvm::LLVMConstVector(vec::raw::to_ptr(indices), n as u32) }; /* TODO: Should add this to rust API */
-
-                let value = BitCast(bcx, llexpr, Type::vector(&ll_t_in, 1));
-
-                ShuffleVector(bcx, value, value, mask)
+                VectorSplat(bcx, n, llexpr)
             }
             (cast_simd_vec, cast_simd_vec) => {
                 BitCast(bcx, llexpr, ll_t_out)
