@@ -915,41 +915,17 @@ pub fn trans_arg_expr(bcx: block,
                             scratch.add_clean(bcx);
                             temp_cleanups.push(scratch.val);
 
-                            match scratch.appropriate_mode(bcx.tcx()) {
-                                ByValue => val = Load(bcx, scratch.val),
-                                ByRef(_) => val = scratch.val,
-                                ByIndex(ref indices) => {
-                                    let ll_idx = indices.map(|i| { C_i32(*i as i32) });
-
-                                    val = if ll_idx.len() == 1 {
-                                        ExtractElement(bcx, scratch.val, ll_idx[0])
-                                    } else {
-                                        let mask = unsafe {
-                                            llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
-                                        };
-
-                                        ShuffleVector(bcx, scratch.val, scratch.val, mask)
-                                    }
-                                }
+                            val = match scratch.appropriate_mode(bcx.tcx()) {
+                                ByValue => Load(bcx, scratch.val),
+                                ByRef(_) => scratch.val,
+                                ByIndex(_) => scratch.to_value_llval(bcx)
                             }
                         } else {
                             debug!("by copy arg with type %s", bcx.ty_to_str(arg_datum.ty));
-                            match arg_datum.mode {
-                                ByRef(_) => val = Load(bcx, arg_datum.val),
-                                ByValue => val = arg_datum.val,
-                                ByIndex(ref indices) => {
-                                    let ll_idx = indices.map(|i| { C_i32(*i as i32) });
-
-                                    if ll_idx.len() == 1 {
-                                        val = ExtractElement(bcx, arg_datum.val, ll_idx[0])
-                                    } else {
-                                        let mask = unsafe {
-                                            llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
-                                        };
-
-                                        val = ShuffleVector(bcx, arg_datum.val, arg_datum.val, mask)
-                                    }
-                                }
+                            val = match arg_datum.mode {
+                                ByValue => arg_datum.val,
+                                ByRef(_) => Load(bcx, arg_datum.val),
+                                ByIndex(_) => arg_datum.to_value_llval(bcx)
                             }
                         }
                     }

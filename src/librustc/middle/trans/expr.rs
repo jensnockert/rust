@@ -832,7 +832,16 @@ fn trans_lvalue_unadjusted(bcx: block, expr: @ast::expr) -> DatumBlock {
             trans_def_lvalue(bcx, expr, bcx.def(expr.id))
         }
         ast::expr_field(base, ident, _) => {
-            trans_rec_field(bcx, base, ident)
+            let basedatum = unpack_datum!(bcx, trans_to_datum(bcx, base));
+
+            match ty::get(basedatum.ty).sty {
+                ty::ty_simd_vec(*) => {
+                    trans_simd_field(bcx, base, ident)
+                }
+                _ => {
+                    trans_rec_field(bcx, base, ident)
+                }
+            }
         }
         ast::expr_index(_, base, idx) => {
             trans_index(bcx, expr, base, idx)
@@ -858,38 +867,52 @@ fn trans_lvalue_unadjusted(bcx: block, expr: @ast::expr) -> DatumBlock {
         let _icx = push_ctxt("trans_rec_field");
 
         let base_datum = unpack_datum!(bcx, trans_to_datum(bcx, base));
-        
-        match ty::get(base_datum.ty).sty {
-            ty::ty_simd_vec(ref et, _) => {
-                match ty::simd_vec_parse_accessor(base_datum.ty, bcx.tcx().sess.str_of(field)) {
-                    Some(indices) => {
-                        DatumBlock {
-                            datum: Datum {
-                                val: base_datum.to_value_llval(bcx),
-                                mode: ByIndex(copy indices),
-                                ty: ty::mk_simd_vec(bcx.tcx(), *et, indices.len())
-                            },
-                            bcx: bcx
+
+        let repr = adt::represent_type(bcx.ccx(), base_datum.ty);
+        do with_field_tys(bcx.tcx(), base_datum.ty, None) |discr, field_tys| {
+            let ix = ty::field_idx_strict(bcx.tcx(), field, field_tys);
+            DatumBlock {
+                datum: do base_datum.get_element(bcx,
+                                                 field_tys[ix].mt.ty,
+                                                 ZeroMem) |srcval| {
+                    adt::trans_field_ptr(bcx, repr, srcval, discr, ix)
+                },
+                bcx: bcx
+            }
+        }
+    }
+
+    fn trans_simd_field(bcx: block,
+                        base: @ast::expr,
+                        field: ast::ident) -> DatumBlock {
+        let mut bcx = bcx;
+        let _icx = push_ctxt("trans_simd_field");
+
+        let base_datum = unpack_datum!(bcx, trans_to_datum(bcx, base));
+
+        match ty::simd_vec_parse_accessor(base_datum.ty, bcx.tcx().sess.str_of(field)) {
+            Some(indices) => {
+                DatumBlock {
+                    datum: Datum {
+                        val: base_datum.to_value_llval(bcx),
+                        mode: ByIndex(copy indices),
+                        ty: match ty::get(base_datum.ty).sty {
+                            ty::ty_simd_vec(ref et, 1) => *et,
+                            ty::ty_simd_vec(ref et, n) => ty::mk_simd_vec(bcx.tcx(), *et, indices.len()),
+                            _ => {
+                                bcx.tcx().sess.span_bug(base.span,
+                                                        fmt!("trans_simd_field reached fall-through case: %?",
+                                                        base.node));
+                            }
                         }
-                    }
-                    None => {
-                        bcx.tcx().sess.span_bug(base.span, fmt!("trans_rec_field reached fall-through case: %?", base.node));
-                    }
+                    },
+                    bcx: bcx
                 }
             }
-            _ => {
-                let repr = adt::represent_type(bcx.ccx(), base_datum.ty);
-                do with_field_tys(bcx.tcx(), base_datum.ty, None) |discr, field_tys| {
-                    let ix = ty::field_idx_strict(bcx.tcx(), field, field_tys);
-                    DatumBlock {
-                        datum: do base_datum.get_element(bcx,
-                                                         field_tys[ix].mt.ty,
-                                                         ZeroMem) |srcval| {
-                            adt::trans_field_ptr(bcx, repr, srcval, discr, ix)
-                        },
-                        bcx: bcx
-                    }
-                }
+            None => {
+                bcx.tcx().sess.span_bug(base.span,
+                                        fmt!("trans_simd_field reached fall-through case: %?",
+                                        base.node));
             }
         }
     }

@@ -261,8 +261,26 @@ impl Datum {
                           -> block {
         debug!("store_to_datum(self=%s, action=%?, datum=%s)",
                self.to_str(bcx.ccx()), action, datum.to_str(bcx.ccx()));
-        assert!(datum.mode.is_by_ref());
-        self.store_to(bcx, id, action, datum.val)
+
+        match datum.mode {
+            ByIndex(ref indices) => {
+                let ll_val = self.to_value_llval(bcx);
+                let ll_idx = indices.map(|i| { C_i32(*i as i32) });
+
+                if ll_idx.len() == 1 {
+                    InsertElement(bcx, datum.val, ll_val, ll_idx[0]);
+                } else {
+                    for uint::range(0, ll_idx.len()) |i| {
+                        let elt = ExtractElement(bcx, ll_val, ll_idx[i]);
+                        InsertElement(bcx, datum.val, elt, ll_idx[i]);
+                    }
+                }
+
+                return glue::take_ty(bcx, datum.val, self.ty);
+            }
+            ByRef(_) => self.store_to(bcx, id, action, datum.val),
+            ByValue => fail!("You cannot store to a ByValue datum")
+        }
     }
 
     pub fn move_to_datum(&self, bcx: block, action: CopyAction, datum: Datum)
@@ -345,17 +363,7 @@ impl Datum {
                 memcpy_ty(bcx, dst, self.val, self.ty);
             }
             ByIndex(ref indices) => {
-                let ll_idx = indices.map(|i| { C_i32(*i as i32) });
-
-                if ll_idx.len() == 1 {
-                    Store(bcx, ExtractElement(bcx, self.val, ll_idx[0]), dst)
-                } else {
-                    let mask = unsafe {
-                        llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
-                    };
-
-                    Store(bcx, ShuffleVector(bcx, self.val, self.val, mask), dst)
-                }
+                Store(bcx, self.to_value_llval(bcx), dst);
             }
         }
 
@@ -389,17 +397,7 @@ impl Datum {
                 Store(bcx, self.val, dst);
             }
             ByIndex(ref indices) => {
-                let ll_idx = indices.map(|i| { C_i32(*i as i32) });
-
-                if ll_idx.len() == 1 {
-                    Store(bcx, ExtractElement(bcx, self.val, ll_idx[0]), dst)
-                } else {
-                    let mask = unsafe {
-                        llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
-                    };
-
-                    Store(bcx, ShuffleVector(bcx, self.val, self.val, mask), dst)
-                }
+                Store(bcx, self.to_value_llval(bcx), dst);
             }
         }
 
@@ -462,28 +460,7 @@ impl Datum {
          * this function is not separately rooted from this datum, so
          * it will not live longer than the current datum. */
 
-        match self.mode {
-            ByIndex(ref indices) => {
-                let ll_idx = indices.map(|i| { C_i32(*i as i32) });
-
-                Datum {
-                    val: if ll_idx.len() == 1 {
-                        ExtractElement(bcx, self.val, ll_idx[0])
-                    } else {
-                        let mask = unsafe {
-                            llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
-                        };
-
-                        ShuffleVector(bcx, self.val, self.val, mask)
-                    },
-                    mode: ByValue,
-                    ty: self.ty
-                }
-            }
-            ByValue | ByRef(_) => {
-                Datum { val: self.to_value_llval(bcx), mode: ByValue, ty: self.ty }
-            }
-        }
+        Datum { val: self.to_value_llval(bcx), mode: ByValue, ty: self.ty }
     }
 
     pub fn to_value_llval(&self, bcx: block) -> ValueRef {
@@ -551,20 +528,8 @@ impl Datum {
                 }
             }
             ByIndex(ref indices) => {
-                let ll_idx = indices.map(|i| { C_i32(*i as i32) });
-
-                let val = if ll_idx.len() == 1 {
-                    ExtractElement(bcx, self.val, ll_idx[0])
-                } else {
-                    let mask = unsafe {
-                        llvm::LLVMConstVector(vec::raw::to_ptr(ll_idx), ll_idx.len() as u32)
-                    };
-
-                    ShuffleVector(bcx, self.val, self.val, mask)
-                };
-
                 let slot = alloc_ty(bcx, self.ty);
-                Store(bcx, val, slot);
+                Store(bcx, self.to_value_llval(bcx), slot);
                 slot
             }
         }
