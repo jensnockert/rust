@@ -289,6 +289,14 @@ fn enc_sty(w: @io::Writer, cx: @ctxt, st: ty::sty) {
         enc_mt(w, cx, mt);
         enc_vstore(w, cx, v);
       }
+      ty::ty_simd_vec(ty, n) => {
+        w.write_char('w');
+        w.write_char('<');
+        w.write_uint(n);
+        w.write_char('x');
+        enc_ty(w, cx, ty);
+        w.write_char('>');
+      }
       ty::ty_estr(v) => {
         w.write_char('v');
         enc_vstore(w, cx, v);

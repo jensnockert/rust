@@ -691,6 +691,9 @@ pub fn noop_fold_ty(t: &ty_, fld: @ast_fold) -> ty_ {
                 fld.fold_expr(e)
             )
         }
+        ty_simd_vec(ref ty, n) => {
+            ty_simd_vec(~fld.fold_ty(*ty), n)
+        }
         ty_mac(ref mac) => ty_mac(fold_mac(mac))
     }
 }

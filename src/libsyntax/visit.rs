@@ -262,6 +262,9 @@ pub fn visit_ty<E: Copy>(t: &Ty, (e, v): (E, vt<E>)) {
             (v.visit_ty)(mt.ty, (copy e, v));
             (v.visit_expr)(ex, (copy e, v));
         },
+        ty_simd_vec(ref ty, _) => {
+            (v.visit_ty)(*ty, (copy e, v));
+        },
         ty_nil | ty_bot | ty_mac(_) | ty_infer => ()
     }
 }

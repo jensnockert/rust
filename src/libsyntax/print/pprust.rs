@@ -431,6 +431,11 @@ pub fn print_type(s: @ps, ty: &ast::Ty) {
         print_expr(s, v);
         word(s.s, "]");
       }
+      ast::ty_simd_vec(ref t, n) => {
+        word(s.s, "simd!(");
+        print_type(s, *t);
+        word(s.s, fmt!(" * %u)", n));
+      }
       ast::ty_mac(_) => {
           fail!("print_type doesn't know how to print a ty_mac");
       }
@@ -533,15 +538,27 @@ pub fn print_item(s: @ps, item: &ast::item) {
       ast::item_ty(ref ty, ref params) => {
         ibox(s, indent_unit);
         ibox(s, 0u);
-        word_nbsp(s, visibility_qualified(item.vis, "type"));
-        print_ident(s, item.ident);
-        print_generics(s, params);
-        end(s); // end the inner ibox
-
-        space(s.s);
-        word_space(s, "=");
-        print_type(s, ty);
-        word(s.s, ";");
+        match ty.node {
+          ast::ty_simd_vec(ref t, n) => { /* TODO: Vectors should simply parse as `type u8x16 = simd!(u8 * 16)` */
+            word(s.s, "simd!(");
+            print_ident(s, item.ident);
+            word_space(s, ":");
+            print_type(s, *t);
+            word(s.s, fmt!(" * %u)", n));
+            end(s); // end the inner ibox
+          }
+          _ => {
+            word_nbsp(s, visibility_qualified(item.vis, "type"));
+            print_ident(s, item.ident);
+            print_generics(s, params);
+            end(s); // end the inner ibox
+        
+            space(s.s);
+            word_space(s, "=");
+            print_type(s, ty);
+            word(s.s, ";");
+          }
+        }
         end(s); // end the outer ibox
       }
       ast::item_enum(ref enum_definition, ref params) => {

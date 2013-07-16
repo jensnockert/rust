@@ -1805,6 +1805,20 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
                     None => ()
                 }
             }
+            ty::ty_simd_vec(ref et, _) => {
+                match ty::simd_vec_parse_accessor(base_t, tcx.sess.str_of(field)) {
+                    Some(indices) => {
+                        if indices.len() == 1 {
+                            fcx.write_ty(expr.id, *et);
+                        } else {
+                            fcx.write_ty(expr.id, ty::mk_simd_vec(tcx, *et, indices.len()));
+                        }
+
+                        return bot;
+                    }
+                    None => ()
+                }
+            }
             _ => ()
         }
 
@@ -2639,6 +2653,75 @@ pub fn check_expr_with_unifier(fcx: @mut FnCtxt,
             match ty::get(t_1).sty {
                 // This will be looked up later on
                 ty::ty_trait(*) => (),
+                ty::ty_simd_vec(ref et_1, n_1) => {
+                    let t_e = fcx.expr_ty(e);
+                    let t_2 = structurally_resolved_type(fcx, e.span, t_e);
+
+                    match ty::get(t_2).sty {
+                        ty::ty_simd_vec(ref et_e, n_2) => {
+                            let et_2 = structurally_resolved_type(fcx, e.span, *et_e);
+
+                            /* TODO: Fix this the correct way, but I (jensnockert) have no idea how to do it */
+                            fn size(t: &ty::t) -> int {
+                                match ty::get(*t).sty {
+                                    ty::ty_int(ast::ty_i8) => 1,
+                                    ty::ty_int(ast::ty_i16) => 2,
+                                    ty::ty_int(ast::ty_i32) => 4,
+                                    ty::ty_int(ast::ty_i64) => 8,
+                                    ty::ty_uint(ast::ty_u8) => 1,
+                                    ty::ty_uint(ast::ty_u16) => 2,
+                                    ty::ty_uint(ast::ty_u32) => 4,
+                                    ty::ty_uint(ast::ty_u64) => 8,
+                                    ty::ty_float(ast::ty_f32) => 4,
+                                    ty::ty_float(ast::ty_f64) => 8,
+                                    _ => -1
+                                }
+                            }
+
+                            let (s_1, s_2) = ((n_1 as int) * size(et_1), (n_2 as int) * size(&et_2));
+
+                            if s_1 < 1 || s_2 < 1 {
+                                fcx.type_error_message(expr.span, |actual| {
+                                    fmt!("disallowed cast: `%s` as `%s` (could not calculate vector size)",
+                                         actual,
+                                         fcx.infcx().ty_to_str(t_1))
+                                }, t_e, None);
+                            } else if s_1 == s_2 {
+                                fcx.write_ty(id, t_1);
+                            } else {
+                                fcx.type_error_message(expr.span, |actual| {
+                                    fmt!("disallowed cast: `%s` as `%s` (size does not match)",
+                                         actual,
+                                         fcx.infcx().ty_to_str(t_1))
+                                }, t_e, None);
+                            }
+                        }
+                        ty::ty_evec(ref mt, ty::vstore_fixed(n_2)) => {
+                            let et_2 = structurally_resolved_type(fcx, e.span, mt.ty);
+ 
+                            if ty::get(*et_1).sty == ty::get(et_2).sty && n_1 == n_2 {
+                                fcx.write_ty(id, t_1);
+                            } else {
+                                fcx.type_error_message(expr.span, |actual| {
+                                    fmt!("disallowed cast: `%s` as `%s` (element or length mismatch)",
+                                         actual,
+                                         fcx.infcx().ty_to_str(t_1))
+                                }, t_e, None);
+                            }
+                        }
+                        _ => {
+                            if ty::get(*et_1).sty == ty::get(t_2).sty {
+                                fcx.write_ty(id, t_1);
+                            } else {
+                                fcx.type_error_message(expr.span, |actual| {
+                                    fmt!("disallowed cast: `%s` as `%s` (element mismatch)",
+                                         actual,
+                                         fcx.infcx().ty_to_str(t_1))
+                                }, t_e, None);
+                            }
+                        }
+                    }
+                }
 
                 _ => {
                     if ty::type_is_nil(t_e) {
@@ -3376,6 +3459,11 @@ pub fn type_is_integral(fcx: @mut FnCtxt, sp: span, typ: ty::t) -> bool {
 pub fn type_is_scalar(fcx: @mut FnCtxt, sp: span, typ: ty::t) -> bool {
     let typ_s = structurally_resolved_type(fcx, sp, typ);
     return ty::type_is_scalar(typ_s);
+}
+
+pub fn type_is_simd_vec(fcx: @mut FnCtxt, sp: span, typ: ty::t) -> bool {
+    let typ_s = structurally_resolved_type(fcx, sp, typ);
+    return ty::type_is_simd_vec(typ_s);
 }
 
 pub fn type_is_unsafe_ptr(fcx: @mut FnCtxt, sp: span, typ: ty::t) -> bool {

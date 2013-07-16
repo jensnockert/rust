@@ -122,6 +122,10 @@ pub fn sizing_type_of(cx: &mut CrateContext, t: ty::t) -> Type {
             Type::array(&sizing_type_of(cx, mt.ty), size as u64)
         }
 
+        ty::ty_simd_vec(ref ty, n) => {
+          Type::vector(&sizing_type_of(cx, *ty), n as u64)
+        }
+
         ty::ty_unboxed_vec(mt) => {
             let sz_ty = sizing_type_of(cx, mt.ty);
             Type::vec(cx.sess.targ_cfg.arch, &sz_ty)
@@ -243,6 +247,10 @@ pub fn type_of(cx: &mut CrateContext, t: ty::t) -> Type {
 
       ty::ty_evec(ref mt, ty::vstore_fixed(n)) => {
           Type::array(&type_of(cx, mt.ty), n as u64)
+      }
+
+      ty::ty_simd_vec(ref ty, n) => {
+        Type::vector(&sizing_type_of(cx, *ty), n as u64)
       }
 
       ty::ty_bare_fn(_) => type_of_fn_from_ty(cx, t).ptr_to(),

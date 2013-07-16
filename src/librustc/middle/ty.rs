@@ -26,6 +26,7 @@ use util::ppaux::{Repr, UserString};
 use util::common::{indenter};
 use util::enum_set::{EnumSet, CLike};
 
+use std::at_vec;
 use std::cast;
 use std::cmp;
 use std::hashmap::{HashMap, HashSet};
@@ -568,6 +569,7 @@ pub enum sty {
     ty_box(mt),
     ty_uniq(mt),
     ty_evec(mt, vstore),
+    ty_simd_vec(t, uint),
     ty_ptr(mt),
     ty_rptr(Region, mt),
     ty_bare_fn(BareFnTy),
@@ -972,6 +974,9 @@ fn mk_t(cx: ctxt, st: sty) -> t {
       &ty_ptr(ref m) | &ty_unboxed_vec(ref m) => {
         flags |= get(m.ty).flags;
       }
+      &ty_simd_vec(ref ty, _) => {
+        flags |= get(*ty).flags;
+      }
       &ty_rptr(r, ref m) => {
         flags |= rflags(r);
         flags |= get(m.ty).flags;
@@ -1151,9 +1156,14 @@ pub fn mk_evec(cx: ctxt, tm: mt, t: vstore) -> t {
     mk_t(cx, ty_evec(tm, t))
 }
 
+pub fn mk_simd_vec(cx: ctxt, ty: t, n: uint) -> t {
+    mk_t(cx, ty_simd_vec(ty, n))
+}
+
 pub fn mk_unboxed_vec(cx: ctxt, tm: mt) -> t {
     mk_t(cx, ty_unboxed_vec(tm))
 }
+
 pub fn mk_mut_unboxed_vec(cx: ctxt, ty: t) -> t {
     mk_t(cx, ty_unboxed_vec(mt {ty: ty, mutbl: ast::m_imm}))
 }
@@ -1238,6 +1248,9 @@ pub fn maybe_walk_ty(ty: t, f: &fn(t) -> bool) {
       ty_ptr(ref tm) | ty_rptr(_, ref tm) | ty_uniq(ref tm) => {
         maybe_walk_ty(tm.ty, f);
       }
+      ty_simd_vec(ref ty, _) => {
+        maybe_walk_ty(*ty, f);
+      }
       ty_enum(_, ref substs) | ty_struct(_, ref substs) |
       ty_trait(_, ref substs, _, _, _) => {
         for (*substs).tps.iter().advance |subty| { maybe_walk_ty(*subty, |x| f(x)); }
@@ -1296,6 +1309,9 @@ fn fold_sty(sty: &sty, fldop: &fn(t) -> t) -> sty {
         }
         ty_evec(ref tm, vst) => {
             ty_evec(mt {ty: fldop(tm.ty), mutbl: tm.mutbl}, vst)
+        }
+        ty_simd_vec(ref ty, n) => {
+            ty_simd_vec(fldop(*ty), n)
         }
         ty_enum(tid, ref substs) => {
             ty_enum(tid, fold_substs(substs, fldop))
@@ -1647,6 +1663,20 @@ pub fn type_is_scalar(ty: t) -> bool {
     }
 }
 
+pub fn type_is_simd_vec(ty: t) -> bool {
+    match get(ty).sty {
+        ty_simd_vec(*) => true,
+        _ => false
+    }
+}
+
+pub fn type_is_allowed_simd_vec_element(ty: t) -> bool {
+    match get(ty).sty {
+        ty_bool | ty_int(_) | ty_float(_) | ty_uint(_) => true,
+        _ => false
+    }
+}
+
 fn type_is_newtype_immediate(cx: ctxt, ty: t) -> bool {
     match get(ty).sty {
         ty_struct(def_id, ref substs) => {
@@ -1663,11 +1693,96 @@ pub fn type_is_immediate(cx: ctxt, ty: t) -> bool {
     return type_is_scalar(ty) || type_is_boxed(ty) ||
         type_is_unique(ty) || type_is_region_ptr(ty) ||
         type_is_newtype_immediate(cx, ty) ||
-        type_is_simd(cx, ty);
+        type_is_simd(cx, ty) || type_is_simd_vec(ty);
 }
 
 pub fn type_needs_drop(cx: ctxt, ty: t) -> bool {
     type_contents(cx, ty).needs_drop(cx)
+}
+
+pub fn simd_vec_element_type(ty: t) -> t {
+    match get(ty).sty {
+        ty_simd_vec(ref et, _) => *et,
+        _ => fail!("simd_vec_element_type called on invalid type")
+    }
+}
+
+fn simd_vec_point_accessor_index(name: char) -> int {
+    match name {
+        'x' | 'r' => 0,
+        'y' | 'g' => 1,
+        'z' | 'b' => 2,
+        'w' | 'a' => 3,
+        _ => -1
+    }
+}
+
+fn simd_vec_numeric_accessor_index(name: char) -> int {
+    match name {
+        '0' => 0, '1' => 1, '2' => 2, '3' => 3, '4' => 4,
+        '5' => 5, '6' => 6, '7' => 7, '8' => 8, '9' => 9,
+        'a' | 'A' => 10, 'b' | 'B' => 11, 'c' | 'C' => 12,
+        'd' | 'D' => 13, 'e' | 'E' => 14, 'f' | 'F' => 15,
+        _ => -1
+    }
+}
+
+pub fn simd_vec_parse_accessor(ty: t, name: &str) -> Option<@[u8]> {
+    let count = match get(ty).sty {
+        ty_simd_vec(_, n) => n,
+        _ => fail!("simd_vec_parse_accessor called on non-simd_vec type")
+    };
+
+    let mut idx = @[]; /* TODO: Yes, I really hate @, unsafe all the things. */
+
+    unsafe {
+        match name {
+            "hi" | "high" => {
+                for uint::range(count / 2, count) |i| {
+                    at_vec::raw::push(&mut idx, i as u8);
+                }
+            }
+            "lo" | "low" => {
+                for uint::range(0, count / 2) |i| {
+                    at_vec::raw::push(&mut idx, i as u8);
+                }
+            }
+            "even" => {
+                for uint::range(0, count) |i| {
+                    if (i % 2 == 0) { at_vec::raw::push(&mut idx, i as u8) }
+                }
+            }
+            "odd" => {
+                for uint::range(0, count) |i| {
+                    if (i % 2 == 1) { at_vec::raw::push(&mut idx, i as u8) }
+                }
+            }
+            _ => {
+                match name.char_at(0) {
+                    's' => {
+                        for uint::range(1, name.len()) |i| {
+                            let index = simd_vec_numeric_accessor_index(name.char_at(i));
+
+                            if index == -1 { return None }
+
+                            at_vec::raw::push(&mut idx, index as u8);
+                        }
+                    }
+                    _ => {
+                        for uint::range(0, name.len()) |i| {
+                            let index = simd_vec_point_accessor_index(name.char_at(i));
+
+                            if index == -1 { return None }
+
+                            at_vec::raw::push(&mut idx, index as u8);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return Some(idx);
 }
 
 // Some things don't need cleanups during unwinding because the
@@ -1706,7 +1821,7 @@ fn type_needs_unwind_cleanup_(cx: ctxt, ty: t,
             true
           }
           ty_nil | ty_bot | ty_bool | ty_int(_) | ty_uint(_) | ty_float(_) |
-          ty_tup(_) | ty_ptr(_) => {
+          ty_tup(_) | ty_ptr(_) | ty_simd_vec(*) => {
             true
           }
           ty_enum(did, ref substs) => {
@@ -1984,7 +2099,7 @@ pub fn type_contents(cx: ctxt, ty: t) -> TypeContents {
         let result = match get(ty).sty {
             // Scalar and unique types are sendable, freezable, and durable
             ty_nil | ty_bot | ty_bool | ty_int(_) | ty_uint(_) | ty_float(_) |
-            ty_bare_fn(_) | ty_ptr(_) => {
+            ty_bare_fn(_) | ty_ptr(_) | ty_simd_vec(*) => {
                 TC_NONE
             }
 
@@ -2320,6 +2435,7 @@ pub fn is_instantiable(cx: ctxt, r_ty: t) -> bool {
             ty_opaque_box |
             ty_opaque_closure_ptr(_) |
             ty_evec(_, _) |
+            ty_simd_vec(_, _) |
             ty_unboxed_vec(_) => {
                 false
             }
@@ -2505,6 +2621,7 @@ pub fn type_is_pod(cx: ctxt, ty: t) -> bool {
       ty_evec(ref mt, vstore_fixed(_)) | ty_unboxed_vec(ref mt) => {
         result = type_is_pod(cx, mt.ty);
       }
+      ty_simd_vec(_, _) => result = true,
       ty_param(_) => result = false,
       ty_opaque_closure_ptr(_) => result = true,
       ty_struct(did, ref substs) => {
@@ -3305,6 +3422,7 @@ pub fn ty_sort_str(cx: ctxt, t: t) -> ~str {
       ty_box(_) => ~"@-ptr",
       ty_uniq(_) => ~"~-ptr",
       ty_evec(_, _) => ~"vector",
+      ty_simd_vec(_, _) => ~"simd vector",
       ty_unboxed_vec(_) => ~"unboxed vector",
       ty_ptr(_) => ~"*-ptr",
       ty_rptr(_, _) => ~"&-ptr",
@@ -4122,8 +4240,11 @@ pub fn is_binopable(cx: ctxt, ty: t, op: ast::binop) -> bool {
 
     fn tycat(cx: ctxt, ty: t) -> int {
         if type_is_simd(cx, ty) {
-            return tycat(cx, simd_type(cx, ty))
+            return tycat(cx, simd_type(cx, ty));
+        } else if type_is_simd_vec(ty) {
+            return tycat(cx, simd_vec_element_type(ty));
         }
+
         match get(ty).sty {
           ty_bool => tycat_bool,
           ty_int(_) | ty_uint(_) | ty_infer(IntVar(_)) => tycat_int,

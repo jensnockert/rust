@@ -836,7 +836,16 @@ fn trans_lvalue_unadjusted(bcx: block, expr: @ast::expr) -> DatumBlock {
             trans_def_lvalue(bcx, expr, bcx.def(expr.id))
         }
         ast::expr_field(base, ident, _) => {
-            trans_rec_field(bcx, base, ident)
+            let basedatum = unpack_datum!(bcx, trans_to_datum(bcx, base));
+
+            match ty::get(basedatum.ty).sty {
+                ty::ty_simd_vec(*) => {
+                    trans_simd_field(bcx, base, ident)
+                }
+                _ => {
+                    trans_rec_field(bcx, base, ident)
+                }
+            }
         }
         ast::expr_index(_, base, idx) => {
             trans_index(bcx, expr, base, idx)
@@ -872,6 +881,33 @@ fn trans_lvalue_unadjusted(bcx: block, expr: @ast::expr) -> DatumBlock {
                     adt::trans_field_ptr(bcx, repr, srcval, discr, ix)
                 },
                 bcx: bcx
+            }
+        }
+    }
+
+    fn trans_simd_field(bcx: block,
+                        base: @ast::expr,
+                        field: ast::ident) -> DatumBlock {
+        let mut bcx = bcx;
+        let _icx = push_ctxt("trans_simd_field");
+
+        let base_datum = unpack_datum!(bcx, trans_to_datum(bcx, base));
+
+        match ty::simd_vec_parse_accessor(base_datum.ty, bcx.tcx().sess.str_of(field)) {
+            Some(indices) => {
+                DatumBlock {
+                    datum: Datum {
+                        val: base_datum.to_ref_llval(bcx),
+                        mode: ByIndex(indices),
+                        ty: base_datum.ty
+                    },
+                    bcx: bcx
+                }
+            }
+            None => {
+                bcx.tcx().sess.span_bug(base.span,
+                                        fmt!("trans_simd_field reached fall-through case: %?",
+                                        base.node));
             }
         }
     }
@@ -1388,6 +1424,9 @@ fn trans_eager_binop(bcx: block,
     if ty::type_is_simd(tcx, intype) {
         intype = ty::simd_type(tcx, intype);
     }
+    if ty::type_is_simd_vec(intype) {
+        intype = ty::simd_vec_element_type(intype);
+    }
     let is_float = ty::type_is_fp(intype);
     let signed = ty::type_is_signed(intype);
 
@@ -1600,6 +1639,8 @@ pub enum cast_kind {
     cast_integral,
     cast_float,
     cast_enum,
+    cast_evec,
+    cast_simd_vec,
     cast_other,
 }
 
@@ -1612,6 +1653,12 @@ pub fn cast_type_kind(t: ty::t) -> cast_kind {
         ty::ty_uint(*)    => cast_integral,
         ty::ty_bool       => cast_integral,
         ty::ty_enum(*)    => cast_enum,
+        ty::ty_evec(_, ty::vstore_fixed(_)) => {
+            cast_evec
+        }
+        ty::ty_simd_vec(*) => {
+            cast_simd_vec
+        }
         _                 => cast_other
     }
 }
@@ -1672,6 +1719,22 @@ fn trans_imm_cast(bcx: block, expr: @ast::expr,
                     cast_float => SIToFP(bcx, lldiscrim_a, ll_t_out),
                     _ => ccx.sess.bug("translating unsupported cast.")
                 }
+            }
+            (cast_integral, cast_simd_vec) | (cast_float, cast_simd_vec) => {
+                let n = match ty::get(t_out).sty {
+                    ty::ty_simd_vec(_, n) => n,
+                    _                     => ccx.sess.bug("translating unsupported simd broadcast.")
+                };
+
+                /* TODO: Check types t_out should be <n * t_in> */
+
+                VectorSplat(bcx, n, llexpr)
+            }
+            (cast_simd_vec, cast_simd_vec) => {
+                BitCast(bcx, llexpr, ll_t_out)
+            }
+            (cast_evec, cast_simd_vec) => {
+                Load(bcx, BitCast(bcx, llexpr, Type::ptr(ll_t_out)))
             }
             _ => ccx.sess.bug("translating unsupported cast.")
         };

@@ -899,18 +899,22 @@ pub fn trans_arg_expr(bcx: block,
                             // Technically, ownership of val passes to the callee.
                             // However, we must cleanup should we fail before the
                             // callee is actually invoked.
+                            //
+                            // TODO: ByIndex should never happen here…?
                             scratch.add_clean(bcx);
                             temp_cleanups.push(scratch.val);
 
                             match scratch.appropriate_mode(bcx.tcx()) {
                                 ByValue => val = Load(bcx, scratch.val),
                                 ByRef(_) => val = scratch.val,
+                                ByIndex(*) => val = scratch.to_value_llval(bcx)
                             }
                         } else {
                             debug!("by copy arg with type %s", bcx.ty_to_str(arg_datum.ty));
                             match arg_datum.mode {
                                 ByRef(_) => val = Load(bcx, arg_datum.val),
                                 ByValue => val = arg_datum.val,
+                                ByIndex(*) => val = arg_datum.to_value_llval(bcx)
                             }
                         }
                     }

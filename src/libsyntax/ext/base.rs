@@ -204,6 +204,9 @@ pub fn syntax_expander_table() -> SyntaxEnv {
     syntax_expanders.insert(
         intern(&"trace_macros"),
         builtin_normal_tt(ext::trace_macros::expand_trace_macros));
+    syntax_expanders.insert(intern(&"simd"),
+                            builtin_normal_tt(ext::simd::expand_simd));
+
     MapChain::new(~syntax_expanders)
 }
 

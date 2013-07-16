@@ -502,6 +502,9 @@ pub fn ast_ty_to_ty<AC:AstConv, RS:region_scope + Copy + 'static>(
           }
         }
       }
+      ast::ty_simd_vec(ref a_ty, n) => {
+         ty::mk_simd_vec(tcx, ast_ty_to_ty(this, rscope, *a_ty), n)
+      }
       ast::ty_infer => {
         // ty_infer should only appear as the type of arguments or return
         // values in a fn_expr, or as the type of local variables.  Both of
