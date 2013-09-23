@@ -298,6 +298,9 @@ fn noop_fold_foreign_item(ni: @foreign_item, fld: @ast_fold)
         attrs: fld.fold_attributes(ni.attrs),
         node:
             match ni.node {
+                foreign_item_raw_ir(ir) => {
+                    foreign_item_raw_ir(ir)
+                }
                 foreign_item_fn(ref fdec, ref generics) => {
                     foreign_item_fn(
                         ast::fn_decl {
@@ -306,6 +309,14 @@ fn noop_fold_foreign_item(ni: @foreign_item, fld: @ast_fold)
                             cf: fdec.cf,
                         },
                         fold_generics(generics, fld))
+                }
+                foreign_item_ir_fn(ref fdec, ir) => {
+                    foreign_item_ir_fn(ast::fn_decl {
+                        inputs: fdec.inputs.map(|a| fld.fold_arg(a)),
+                        output: fld.fold_ty(&fdec.output),
+                        cf: fdec.cf
+                    },
+                    ir)
                 }
                 foreign_item_static(ref t, m) => {
                     foreign_item_static(fld.fold_ty(t), m)

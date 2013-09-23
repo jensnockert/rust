@@ -386,9 +386,13 @@ pub fn walk_foreign_item<E:Clone, V:Visitor<E>>(visitor: &mut V,
                                    foreign_item: &foreign_item,
                                    env: E) {
     match foreign_item.node {
+        foreign_item_raw_ir(*) => {}
         foreign_item_fn(ref function_declaration, ref generics) => {
             walk_fn_decl(visitor, function_declaration, env.clone());
             visitor.visit_generics(generics, env)
+        }
+        foreign_item_ir_fn(ref function_declaration, _) => {
+            walk_fn_decl(visitor, function_declaration, env.clone());
         }
         foreign_item_static(ref typ, _) => visitor.visit_ty(typ, env),
     }

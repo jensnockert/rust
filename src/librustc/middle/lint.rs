@@ -919,7 +919,11 @@ fn check_item_ctypes(cx: &Context, it: &ast::item) {
       ast::item_foreign_mod(ref nmod) if !nmod.abis.is_intrinsic() => {
         for ni in nmod.items.iter() {
             match ni.node {
+                ast::foreign_item_raw_ir(_) => {}
                 ast::foreign_item_fn(ref decl, _) => {
+                    check_foreign_fn(cx, decl);
+                }
+                ast::foreign_item_ir_fn(ref decl, _) => {
                     check_foreign_fn(cx, decl);
                 }
                 ast::foreign_item_static(ref t, _) => { check_ty(cx, t); }

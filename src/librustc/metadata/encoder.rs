@@ -1226,6 +1226,9 @@ fn encode_info_for_foreign_item(ecx: &EncodeContext,
 
     ebml_w.start_tag(tag_items_data_item);
     match nitem.node {
+      foreign_item_raw_ir(*) => { // TODO: Fix this shit
+          encode_def_id(ebml_w, local_def(nitem.id));
+      }
       foreign_item_fn(*) => {
         encode_def_id(ebml_w, local_def(nitem.id));
         encode_family(ebml_w, purity_fn_family(impure_fn));
@@ -1237,6 +1240,15 @@ fn encode_info_for_foreign_item(ecx: &EncodeContext,
         } else {
             encode_symbol(ecx, ebml_w, nitem.id);
         }
+        encode_path(ecx, ebml_w, *path, ast_map::path_name(nitem.ident));
+      }
+      foreign_item_ir_fn(*) => {  // TODO: Fix this shit
+        encode_def_id(ebml_w, local_def(nitem.id));
+        encode_family(ebml_w, purity_fn_family(impure_fn));
+        encode_bounds_and_type(ebml_w, ecx,
+                               &lookup_item_type(ecx.tcx,local_def(nitem.id)));
+        encode_name(ecx, ebml_w, nitem.ident);
+        (ecx.encode_inlined_item)(ecx, ebml_w, *path, ii_foreign(nitem));
         encode_path(ecx, ebml_w, *path, ast_map::path_name(nitem.ident));
       }
       foreign_item_static(_, mutbl) => {

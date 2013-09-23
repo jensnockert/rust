@@ -26,6 +26,7 @@ use middle::trans::type_of;
 use middle::ty;
 use middle::ty::FnSig;
 
+use std::str;
 use std::uint;
 use std::vec;
 use syntax::codemap::Span;
@@ -36,6 +37,8 @@ use syntax::abi::{RustIntrinsic, Rust, Stdcall, Fastcall,
                   Cdecl, Aapcs, C, AbiSet};
 use util::ppaux::{Repr, UserString};
 use middle::trans::type_::Type;
+
+use llvm;
 
 ///////////////////////////////////////////////////////////////////////////
 // Type definitions
@@ -326,8 +329,46 @@ pub fn trans_foreign_mod(ccx: @mut CrateContext,
                          foreign_mod: &ast::foreign_mod) {
     let _icx = push_ctxt("foreign::trans_foreign_mod");
     for &foreign_item in foreign_mod.items.iter() {
-        let lname = link_name(ccx, foreign_item);
-        ccx.item_symbols.insert(foreign_item.id, lname.to_owned());
+        let name = link_name(ccx, foreign_item);
+
+        match foreign_item.node {
+            ast::foreign_item_raw_ir(ir) => {
+                do ir.to_c_str().with_ref |c| {
+                    unsafe {
+                        let result = llvm::LLVMRustAddRawIR(ccx.llmod, c);
+
+                        if !result {
+                            let cstr = llvm::LLVMRustGetLastError();
+
+                            ccx.sess.fatal("Error when adding raw IR: " + str::raw::from_c_str(cstr));
+                        }
+                    }
+                }
+            }
+            ast::foreign_item_fn(*) | ast::foreign_item_static(*) => {}
+            ast::foreign_item_ir_fn(ref fn_decl, ir) => {
+                let tys = foreign_types_for_id(ccx, foreign_item.id);
+
+                // Create the LLVM value for the C extern fn
+                let llfn_ty = lltype_for_fn_from_foreign_types(&tys);
+
+                do name.to_c_str().with_ref |n| {
+                    do ir.to_c_str().with_ref |c| {
+                        unsafe {
+                            let result = llvm::LLVMRustCreateIRFunction(ccx.llmod, llfn_ty.to_ref(), n, c);
+
+                            if !result {
+                                let cstr = llvm::LLVMRustGetLastError();
+
+                                ccx.sess.fatal("Error when creating IR function: " + str::raw::from_c_str(cstr));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        ccx.item_symbols.insert(foreign_item.id, name.to_owned());
     }
 }
 

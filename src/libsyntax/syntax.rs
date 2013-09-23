@@ -54,6 +54,8 @@ pub mod print {
 
 pub mod ext {
     pub mod asm;
+    pub mod ir_module;
+
     pub mod base;
     pub mod expand;
 

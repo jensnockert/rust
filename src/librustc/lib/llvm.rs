@@ -1860,6 +1860,12 @@ pub mod llvm {
         pub fn LLVMRustStartMultithreading() -> bool;
 
         #[fast_ffi]
+        pub fn LLVMRustAddRawIR(M: ModuleRef, code: *c_char) -> bool;
+
+        #[fast_ffi]
+        pub fn LLVMRustCreateIRFunction(M: ModuleRef, f: TypeRef, name: *c_char, code: *c_char) -> bool;
+
+        #[fast_ffi]
         pub fn LLVMStructCreateNamed(C: ContextRef, Name: *c_char) -> TypeRef;
 
         #[fast_ffi]
@@ -2268,7 +2274,7 @@ impl TypeNames {
                 Label => ~"Label",
                 Vector => ~"Vector",
                 Metadata => ~"Metadata",
-                X86_MMX => ~"X86_MMAX",
+                X86_MMX => ~"X86_MAX",
                 Integer => {
                     fmt!("i%d", llvm::LLVMGetIntTypeWidth(ty.to_ref()) as int)
                 }

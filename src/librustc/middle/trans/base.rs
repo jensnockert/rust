@@ -2629,7 +2629,10 @@ pub fn get_item_val(ccx: @mut CrateContext, id: ast::NodeId) -> ValueRef {
                     exprt = true;
 
                     match ni.node {
-                        ast::foreign_item_fn(*) => {
+                        ast::foreign_item_raw_ir(*) => {
+                            ccx.tcx.sess.bug("Raw IR should not be registered")
+                        }
+                        ast::foreign_item_fn(*) | ast::foreign_item_ir_fn(*) => {
                             let path = vec::append((*pth).clone(), [path_name(ni.ident)]);
                             foreign::register_foreign_item_fn(ccx, abis, &path, ni)
                         }

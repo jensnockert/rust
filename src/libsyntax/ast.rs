@@ -1151,7 +1151,9 @@ pub struct foreign_item {
 
 #[deriving(Eq, Encodable, Decodable,IterBytes)]
 pub enum foreign_item_ {
+    foreign_item_raw_ir(@str),
     foreign_item_fn(fn_decl, Generics),
+    foreign_item_ir_fn(fn_decl, /* code */ @str),
     foreign_item_static(Ty, /* is_mutbl */ bool),
 }
 

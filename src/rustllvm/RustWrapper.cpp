@@ -796,3 +796,45 @@ extern "C" void LLVMDICompositeTypeSetTypeArray(
 {
     unwrapDI<DICompositeType>(CompositeType).setTypeArray(unwrapDI<DIArray>(TypeArray));
 }
+
+extern "C" bool LLVMRustAddRawIR(LLVMModuleRef M, const char * code) {
+    SMDiagnostic err;
+    ParseAssemblyString(code, unwrap(M), err, unwrap(M)->getContext());
+
+    if (err.getMessage().str() == "") {
+        return true;
+    } else {
+        LLVMRustError = err.getMessage().str().c_str();
+
+        return false;
+    }
+}
+
+extern "C" bool LLVMRustCreateIRFunction(LLVMModuleRef M, LLVMTypeRef f, const char * name, const char * code) {
+    std::string str;
+    llvm::raw_string_ostream stream(str);
+
+    LLVMTypeRef return_type = LLVMGetReturnType(f);
+
+    stream << "define ";
+    unwrap(return_type)->print(stream);
+    stream << " @" << name << "(";
+
+    unsigned n = LLVMCountParamTypes(f);
+
+    LLVMTypeRef * arguments = (LLVMTypeRef*)calloc((size_t)n, sizeof(LLVMTypeRef));
+    LLVMGetParamTypes(f, arguments);
+    for (unsigned i = 0; i < n; i++) {
+        if (i != 0) {
+            stream << ", ";
+        }
+
+        unwrap(arguments[i])->print(stream);
+        stream << " %arg" << i;
+    }
+    free(arguments);
+
+    stream << ") {\n" << code << "\n}";
+
+    return LLVMRustAddRawIR(M, stream.str().c_str());
+}

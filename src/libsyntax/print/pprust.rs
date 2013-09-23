@@ -457,12 +457,27 @@ pub fn print_foreign_item(s: @ps, item: &ast::foreign_item) {
     maybe_print_comment(s, item.span.lo);
     print_outer_attributes(s, item.attrs);
     match item.node {
+      ast::foreign_item_raw_ir(ir) => {
+          word_space(s, "ir");
+          print_string(s, ir);
+      }
       ast::foreign_item_fn(ref decl, ref generics) => {
         print_fn(s, decl, None, AbiSet::Rust(), item.ident, generics, None,
                  item.vis);
         end(s); // end head-ibox
         word(s.s, ";");
         end(s); // end the outer fn box
+      }
+      ast::foreign_item_ir_fn(ref decl, ir) => {
+          word_space(s, "fn");
+          print_ident(s, item.ident);
+          print_fn_args_and_ret(s, decl, None);
+
+          nbsp(s);
+
+          bopen(s);
+          print_string(s, ir);
+          bclose(s, item.span);
       }
       ast::foreign_item_static(ref t, m) => {
         head(s, visibility_qualified(item.vis, "static"));

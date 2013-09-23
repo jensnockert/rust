@@ -1605,6 +1605,9 @@ impl Resolver {
                            foreign_item.span);
 
         match foreign_item.node {
+            foreign_item_raw_ir(*) => {
+                visit::walk_foreign_item(visitor, foreign_item, new_parent);
+            }
             foreign_item_fn(_, ref generics) => {
                 let def = DefFn(local_def(foreign_item.id), unsafe_fn);
                 name_bindings.define_value(Public, def, foreign_item.span);
@@ -1613,6 +1616,14 @@ impl Resolver {
                     HasTypeParameters(
                         generics, foreign_item.id, 0, NormalRibKind))
                 {
+                    visit::walk_foreign_item(visitor, foreign_item, new_parent);
+                }
+            }
+            foreign_item_ir_fn(*) => {
+                let def = DefFn(local_def(foreign_item.id), unsafe_fn);
+                name_bindings.define_value(Public, def, foreign_item.span);
+
+                do self.with_type_parameter_rib(NoTypeParameters) {
                     visit::walk_foreign_item(visitor, foreign_item, new_parent);
                 }
             }
@@ -3674,11 +3685,23 @@ impl Resolver {
                 do self.with_scope(Some(item.ident)) {
                     for foreign_item in foreign_module.items.iter() {
                         match foreign_item.node {
+                            foreign_item_raw_ir(*) => {
+                                visit::walk_foreign_item(visitor,
+                                                         *foreign_item,
+                                                         ());
+                            }
                             foreign_item_fn(_, ref generics) => {
                                 self.with_type_parameter_rib(
                                     HasTypeParameters(
                                         generics, foreign_item.id, 0,
                                         NormalRibKind),
+                                    || visit::walk_foreign_item(visitor,
+                                                                *foreign_item,
+                                                                ()));
+                            }
+                            foreign_item_ir_fn(*) => {
+                                self.with_type_parameter_rib(
+                                    NoTypeParameters,
                                     || visit::walk_foreign_item(visitor,
                                                                 *foreign_item,
                                                                 ()));

@@ -1184,7 +1184,29 @@ pub fn ty_of_foreign_item(ccx: &CrateCtxt,
                           abis: AbiSet) -> ty::ty_param_bounds_and_ty
 {
     match it.node {
+        ast::foreign_item_raw_ir(*) => {
+            let g = &ast::Generics {
+                lifetimes: opt_vec::Empty,
+                ty_params: opt_vec::Empty
+            };
+
+            let ty_generics = ty_generics(ccx, None, g, 0);
+
+            ty_param_bounds_and_ty { generics: ty_generics, ty: ty::mk_nil() }
+        }
         ast::foreign_item_fn(ref fn_decl, ref generics) => {
+            ty_of_foreign_fn_decl(ccx,
+                                  fn_decl,
+                                  local_def(it.id),
+                                  generics,
+                                  abis)
+        }
+        ast::foreign_item_ir_fn(ref fn_decl, _) => {
+            let generics = &ast::Generics {
+                lifetimes: opt_vec::Empty,
+                ty_params: opt_vec::Empty
+            };
+
             ty_of_foreign_fn_decl(ccx,
                                   fn_decl,
                                   local_def(it.id),

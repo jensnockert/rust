@@ -4554,7 +4554,7 @@ impl Parser {
     }
 
     // parse a string as an ABI spec on an extern type or module
-    fn parse_opt_abis(&self) -> Option<AbiSet> {
+    pub fn parse_opt_abis(&self) -> Option<AbiSet> {
         match *self.token {
             token::LIT_STR(s) => {
                 self.bump();

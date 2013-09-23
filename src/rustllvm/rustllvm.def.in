@@ -628,3 +628,5 @@ LLVMRustSetNormalizedTarget
 LLVMRustAddAlwaysInlinePass
 LLVMAddReturnAttribute
 LLVMRemoveReturnAttribute
+LLVMRustAddRawIR
+LLVMRustCreateIRFunction
