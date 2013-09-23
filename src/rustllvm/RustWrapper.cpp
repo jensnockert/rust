@@ -797,14 +797,20 @@ extern "C" void LLVMDICompositeTypeSetTypeArray(
     unwrapDI<DICompositeType>(CompositeType).setTypeArray(unwrapDI<DIArray>(TypeArray));
 }
 
+static char raw_ir_error[8096];
+
 extern "C" bool LLVMRustAddRawIR(LLVMModuleRef M, const char * code) {
     SMDiagnostic err;
     ParseAssemblyString(code, unwrap(M), err, unwrap(M)->getContext());
 
-    if (err.getMessage().str() == "") {
+    std::string message = err.getMessage().str();
+
+    if (message == "") {
         return true;
     } else {
-        LLVMRustError = err.getMessage().str().c_str();
+        (message + "\n" + code).copy(raw_ir_error, sizeof(raw_ir_error));
+
+        LLVMRustError = raw_ir_error;
 
         return false;
     }

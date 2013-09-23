@@ -338,7 +338,8 @@ pub fn trans_foreign_mod(ccx: @mut CrateContext,
                         if !result {
                             let cstr = llvm::LLVMRustGetLastError();
 
-                            ccx.sess.fatal("Error when adding raw IR: " + str::raw::from_c_str(cstr));
+                            ccx.sess.fatal(fmt!("Adding raw IR: %s",
+                                str::raw::from_c_str(cstr)));
                         }
                     }
                 }
@@ -358,7 +359,8 @@ pub fn trans_foreign_mod(ccx: @mut CrateContext,
                             if !result {
                                 let cstr = llvm::LLVMRustGetLastError();
 
-                                ccx.sess.fatal("Error when creating IR function: " + str::raw::from_c_str(cstr));
+                                ccx.sess.fatal(fmt!("Adding IR function: %s",
+                                    str::raw::from_c_str(cstr)));
                             }
                         }
                     }
