@@ -38,8 +38,6 @@ use syntax::abi::{RustIntrinsic, Rust, Stdcall, Fastcall,
 use util::ppaux::{Repr, UserString};
 use middle::trans::type_::Type;
 
-use llvm;
-
 ///////////////////////////////////////////////////////////////////////////
 // Type definitions
 
@@ -346,7 +344,7 @@ pub fn trans_foreign_mod(ccx: @mut CrateContext,
                 }
             }
             ast::foreign_item_fn(*) | ast::foreign_item_static(*) => {}
-            ast::foreign_item_ir_fn(ref fn_decl, ir) => {
+            ast::foreign_item_ir_fn(_, ir) => {
                 let tys = foreign_types_for_id(ccx, foreign_item.id);
 
                 // Create the LLVM value for the C extern fn
