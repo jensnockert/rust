@@ -57,10 +57,8 @@ impl BitCount for int {
 impl CheckedAdd for int {
     #[inline]
     fn checked_add(&self, v: &int) -> Option<int> {
-        unsafe {
-            let (x, y) = intrinsics::i32_add_with_overflow(*self as i32, *v as i32);
-            if y { None } else { Some(x as int) }
-        }
+        let (x, y) = intrinsics::i32_add_with_overflow(*self as i32, *v as i32);
+        if y { None } else { Some(x as int) }
     }
 }
 
@@ -68,10 +66,8 @@ impl CheckedAdd for int {
 impl CheckedAdd for int {
     #[inline]
     fn checked_add(&self, v: &int) -> Option<int> {
-        unsafe {
-            let (x, y) = intrinsics::i64_add_with_overflow(*self as i64, *v as i64);
-            if y { None } else { Some(x as int) }
-        }
+        let (x, y) = intrinsics::i64_add_with_overflow(*self as i64, *v as i64);
+        if y { None } else { Some(x as int) }
     }
 }
 
@@ -79,10 +75,8 @@ impl CheckedAdd for int {
 impl CheckedSub for int {
     #[inline]
     fn checked_sub(&self, v: &int) -> Option<int> {
-        unsafe {
-            let (x, y) = intrinsics::i32_sub_with_overflow(*self as i32, *v as i32);
-            if y { None } else { Some(x as int) }
-        }
+        let (x, y) = intrinsics::i32_sub_with_overflow(*self as i32, *v as i32);
+        if y { None } else { Some(x as int) }
     }
 }
 
@@ -90,10 +84,8 @@ impl CheckedSub for int {
 impl CheckedSub for int {
     #[inline]
     fn checked_sub(&self, v: &int) -> Option<int> {
-        unsafe {
-            let (x, y) = intrinsics::i64_sub_with_overflow(*self as i64, *v as i64);
-            if y { None } else { Some(x as int) }
-        }
+        let (x, y) = intrinsics::i64_sub_with_overflow(*self as i64, *v as i64);
+        if y { None } else { Some(x as int) }
     }
 }
 
@@ -101,10 +93,8 @@ impl CheckedSub for int {
 impl CheckedMul for int {
     #[inline]
     fn checked_mul(&self, v: &int) -> Option<int> {
-        unsafe {
-            let (x, y) = intrinsics::i32_mul_with_overflow(*self as i32, *v as i32);
-            if y { None } else { Some(x as int) }
-        }
+        let (x, y) = intrinsics::i32_mul_with_overflow(*self as i32, *v as i32);
+        if y { None } else { Some(x as int) }
     }
 }
 
@@ -112,10 +102,8 @@ impl CheckedMul for int {
 impl CheckedMul for int {
     #[inline]
     fn checked_mul(&self, v: &int) -> Option<int> {
-        unsafe {
-            let (x, y) = intrinsics::i64_mul_with_overflow(*self as i64, *v as i64);
-            if y { None } else { Some(x as int) }
-        }
+        let (x, y) = intrinsics::i64_mul_with_overflow(*self as i64, *v as i64);
+        if y { None } else { Some(x as int) }
     }
 }
 

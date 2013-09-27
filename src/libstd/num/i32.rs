@@ -21,43 +21,37 @@ int_module!(i32, 32)
 impl BitCount for i32 {
     /// Counts the number of bits set. Wraps LLVM's `ctpop` intrinsic.
     #[inline]
-    fn population_count(&self) -> i32 { unsafe { intrinsics::ctpop32(*self) } }
+    fn population_count(&self) -> i32 { intrinsics::ctpop32(*self) }
 
     /// Counts the number of leading zeros. Wraps LLVM's `ctlz` intrinsic.
     #[inline]
-    fn leading_zeros(&self) -> i32 { unsafe { intrinsics::ctlz32(*self) } }
+    fn leading_zeros(&self) -> i32 { intrinsics::ctlz32(*self) }
 
     /// Counts the number of trailing zeros. Wraps LLVM's `cttz` intrinsic.
     #[inline]
-    fn trailing_zeros(&self) -> i32 { unsafe { intrinsics::cttz32(*self) } }
+    fn trailing_zeros(&self) -> i32 { intrinsics::cttz32(*self) }
 }
 
 impl CheckedAdd for i32 {
     #[inline]
     fn checked_add(&self, v: &i32) -> Option<i32> {
-        unsafe {
-            let (x, y) = intrinsics::i32_add_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i32_add_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }
 
 impl CheckedSub for i32 {
     #[inline]
     fn checked_sub(&self, v: &i32) -> Option<i32> {
-        unsafe {
-            let (x, y) = intrinsics::i32_sub_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i32_sub_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }
 
 impl CheckedMul for i32 {
     #[inline]
     fn checked_mul(&self, v: &i32) -> Option<i32> {
-        unsafe {
-            let (x, y) = intrinsics::i32_mul_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i32_mul_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }

@@ -23,6 +23,7 @@ use to_str;
 pub use cmath::c_float_targ_consts::*;
 
 use self::delegated::*;
+use self::unsafe_delegated::*;
 
 macro_rules! delegate(
     (
@@ -37,16 +38,38 @@ macro_rules! delegate(
         // An inner module is required to get the #[inline] attribute on the
         // functions.
         mod delegated {
-            use cmath::c_float_utils;
-            use libc::{c_float, c_int};
             use unstable::intrinsics;
 
             $(
                 #[inline] #[fixed_stack_segment] #[inline(never)]
                 pub fn $name($( $arg : $arg_ty ),*) -> $rv {
-                    unsafe {
-                        $bound_name($( $arg ),*)
-                    }
+                    $bound_name($( $arg ),*)
+                }
+            )*
+        }
+    )
+)
+
+macro_rules! delegate_unsafe(
+    (
+        $(
+            fn $name:ident(
+                $(
+                    $arg:ident : $arg_ty:ty
+                ),*
+            ) -> $rv:ty = $bound_name:path
+        ),*
+    ) => (
+        // An inner module is required to get the #[inline] attribute on the
+        // functions.
+        mod unsafe_delegated {
+            use cmath::c_float_utils;
+            use libc::{c_float, c_int};
+
+            $(
+                #[inline] #[fixed_stack_segment] #[inline(never)]
+                pub fn $name($( $arg : $arg_ty ),*) -> $rv {
+                    unsafe { $bound_name($( $arg ),*) }
                 }
             )*
         }
@@ -65,20 +88,18 @@ delegate!(
     fn log2(n: f32) -> f32 = intrinsics::log2f32,
     fn mul_add(a: f32, b: f32, c: f32) -> f32 = intrinsics::fmaf32,
     fn pow(n: f32, e: f32) -> f32 = intrinsics::powf32,
-    fn powi(n: f32, e: c_int) -> f32 = intrinsics::powif32,
+    fn powi(n: f32, e: i32) -> f32 = intrinsics::powif32,
     fn sin(n: f32) -> f32 = intrinsics::sinf32,
     fn sqrt(n: f32) -> f32 = intrinsics::sqrtf32,
-
-    // LLVM 3.3 required to use intrinsics for these four
-    fn ceil(n: c_float) -> c_float = c_float_utils::ceil,
-    fn trunc(n: c_float) -> c_float = c_float_utils::trunc,
-    /*
     fn ceil(n: f32) -> f32 = intrinsics::ceilf32,
-    fn trunc(n: f32) -> f32 = intrinsics::truncf32,
+    fn trunc(n: f32) -> f32 = intrinsics::truncf32
+)
+    /*
     fn rint(n: f32) -> f32 = intrinsics::rintf32,
     fn nearbyint(n: f32) -> f32 = intrinsics::nearbyintf32,
     */
 
+delegate_unsafe!(
     // cmath
     fn acos(n: c_float) -> c_float = c_float_utils::acos,
     fn asin(n: c_float) -> c_float = c_float_utils::asin,

@@ -21,43 +21,37 @@ int_module!(i16, 16)
 impl BitCount for i16 {
     /// Counts the number of bits set. Wraps LLVM's `ctpop` intrinsic.
     #[inline]
-    fn population_count(&self) -> i16 { unsafe { intrinsics::ctpop16(*self) } }
+    fn population_count(&self) -> i16 { intrinsics::ctpop16(*self) }
 
     /// Counts the number of leading zeros. Wraps LLVM's `ctlz` intrinsic.
     #[inline]
-    fn leading_zeros(&self) -> i16 { unsafe { intrinsics::ctlz16(*self) } }
+    fn leading_zeros(&self) -> i16 { intrinsics::ctlz16(*self) }
 
     /// Counts the number of trailing zeros. Wraps LLVM's `cttz` intrinsic.
     #[inline]
-    fn trailing_zeros(&self) -> i16 { unsafe { intrinsics::cttz16(*self) } }
+    fn trailing_zeros(&self) -> i16 { intrinsics::cttz16(*self) }
 }
 
 impl CheckedAdd for i16 {
     #[inline]
     fn checked_add(&self, v: &i16) -> Option<i16> {
-        unsafe {
-            let (x, y) = intrinsics::i16_add_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i16_add_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }
 
 impl CheckedSub for i16 {
     #[inline]
     fn checked_sub(&self, v: &i16) -> Option<i16> {
-        unsafe {
-            let (x, y) = intrinsics::i16_sub_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i16_sub_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }
 
 impl CheckedMul for i16 {
     #[inline]
     fn checked_mul(&self, v: &i16) -> Option<i16> {
-        unsafe {
-            let (x, y) = intrinsics::i16_mul_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i16_mul_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }

@@ -36,6 +36,8 @@ A quick refresher on memory ordering:
 #[cfg(test)]
 pub use realstd::unstable::intrinsics::{TyDesc, Opaque, TyVisitor};
 
+use ptr;
+
 pub type GlueFn = extern "Rust" fn(*i8);
 
 // NB: this has to be kept in sync with `type_desc` in `rt`
@@ -363,124 +365,659 @@ extern "rust-intrinsic" {
     /// Equivalent to the `llvm.memset.p0i8.i64` intrinsic, with a size of
     /// `count` * `size_of::<T>()` and an alignment of `min_align_of::<T>()`
     pub fn memset64<T>(dst: *mut T, val: u8, count: u64);
-
-    pub fn sqrtf32(x: f32) -> f32;
-    pub fn sqrtf64(x: f64) -> f64;
-
-    pub fn powif32(a: f32, x: i32) -> f32;
-    pub fn powif64(a: f64, x: i32) -> f64;
-
-    // the following kill the stack canary without
-    // `fixed_stack_segment`. This possibly only affects the f64
-    // variants, but it's hard to be sure since it seems to only
-    // occur with fairly specific arguments.
-    #[fixed_stack_segment]
-    pub fn sinf32(x: f32) -> f32;
-    #[fixed_stack_segment]
-    pub fn sinf64(x: f64) -> f64;
-
-    #[fixed_stack_segment]
-    pub fn cosf32(x: f32) -> f32;
-    #[fixed_stack_segment]
-    pub fn cosf64(x: f64) -> f64;
-
-    #[fixed_stack_segment]
-    pub fn powf32(a: f32, x: f32) -> f32;
-    #[fixed_stack_segment]
-    pub fn powf64(a: f64, x: f64) -> f64;
-
-    #[fixed_stack_segment]
-    pub fn expf32(x: f32) -> f32;
-    #[fixed_stack_segment]
-    pub fn expf64(x: f64) -> f64;
-
-    pub fn exp2f32(x: f32) -> f32;
-    pub fn exp2f64(x: f64) -> f64;
-
-    pub fn logf32(x: f32) -> f32;
-    pub fn logf64(x: f64) -> f64;
-
-    pub fn log10f32(x: f32) -> f32;
-    pub fn log10f64(x: f64) -> f64;
-
-    pub fn log2f32(x: f32) -> f32;
-    pub fn log2f64(x: f64) -> f64;
-
-    pub fn fmaf32(a: f32, b: f32, c: f32) -> f32;
-    pub fn fmaf64(a: f64, b: f64, c: f64) -> f64;
-
-    pub fn fabsf32(x: f32) -> f32;
-    pub fn fabsf64(x: f64) -> f64;
-
-    pub fn floorf32(x: f32) -> f32;
-    pub fn floorf64(x: f64) -> f64;
-
-    pub fn ceilf32(x: f32) -> f32;
-    pub fn ceilf64(x: f64) -> f64;
-
-    pub fn truncf32(x: f32) -> f32;
-    pub fn truncf64(x: f64) -> f64;
-
-    pub fn ctpop8(x: i8) -> i8;
-    pub fn ctpop16(x: i16) -> i16;
-    pub fn ctpop32(x: i32) -> i32;
-    pub fn ctpop64(x: i64) -> i64;
-
-    pub fn ctlz8(x: i8) -> i8;
-    pub fn ctlz16(x: i16) -> i16;
-    pub fn ctlz32(x: i32) -> i32;
-    pub fn ctlz64(x: i64) -> i64;
-
-    pub fn cttz8(x: i8) -> i8;
-    pub fn cttz16(x: i16) -> i16;
-    pub fn cttz32(x: i32) -> i32;
-    pub fn cttz64(x: i64) -> i64;
-
-    pub fn bswap16(x: i16) -> i16;
-    pub fn bswap32(x: i32) -> i32;
-    pub fn bswap64(x: i64) -> i64;
-
-    pub fn i8_add_with_overflow(x: i8, y: i8) -> (i8, bool);
-    pub fn i16_add_with_overflow(x: i16, y: i16) -> (i16, bool);
-    pub fn i32_add_with_overflow(x: i32, y: i32) -> (i32, bool);
-    pub fn i64_add_with_overflow(x: i64, y: i64) -> (i64, bool);
-
-    pub fn u8_add_with_overflow(x: u8, y: u8) -> (u8, bool);
-    pub fn u16_add_with_overflow(x: u16, y: u16) -> (u16, bool);
-    pub fn u32_add_with_overflow(x: u32, y: u32) -> (u32, bool);
-    pub fn u64_add_with_overflow(x: u64, y: u64) -> (u64, bool);
-
-    pub fn i8_sub_with_overflow(x: i8, y: i8) -> (i8, bool);
-    pub fn i16_sub_with_overflow(x: i16, y: i16) -> (i16, bool);
-    pub fn i32_sub_with_overflow(x: i32, y: i32) -> (i32, bool);
-    pub fn i64_sub_with_overflow(x: i64, y: i64) -> (i64, bool);
-
-    pub fn u8_sub_with_overflow(x: u8, y: u8) -> (u8, bool);
-    pub fn u16_sub_with_overflow(x: u16, y: u16) -> (u16, bool);
-    pub fn u32_sub_with_overflow(x: u32, y: u32) -> (u32, bool);
-    pub fn u64_sub_with_overflow(x: u64, y: u64) -> (u64, bool);
-
-    pub fn i8_mul_with_overflow(x: i8, y: i8) -> (i8, bool);
-    pub fn i16_mul_with_overflow(x: i16, y: i16) -> (i16, bool);
-    pub fn i32_mul_with_overflow(x: i32, y: i32) -> (i32, bool);
-    pub fn i64_mul_with_overflow(x: i64, y: i64) -> (i64, bool);
-
-    pub fn u8_mul_with_overflow(x: u8, y: u8) -> (u8, bool);
-    pub fn u16_mul_with_overflow(x: u16, y: u16) -> (u16, bool);
-    pub fn u32_mul_with_overflow(x: u32, y: u32) -> (u32, bool);
-    pub fn u64_mul_with_overflow(x: u64, y: u64) -> (u64, bool);
 }
 
-#[cfg(target_endian = "little")] pub fn to_le16(x: i16) -> i16 { x }
-#[cfg(target_endian = "big")]    pub fn to_le16(x: i16) -> i16 { unsafe { bswap16(x) } }
-#[cfg(target_endian = "little")] pub fn to_le32(x: i32) -> i32 { x }
-#[cfg(target_endian = "big")]    pub fn to_le32(x: i32) -> i32 { unsafe { bswap32(x) } }
-#[cfg(target_endian = "little")] pub fn to_le64(x: i64) -> i64 { x }
-#[cfg(target_endian = "big")]    pub fn to_le64(x: i64) -> i64 { unsafe { bswap64(x) } }
+#[cfg(stage1)]
+#[cfg(stage2)]
+#[cfg(stage3)]
+mod workaround {
+    llvm!(extern {
+        ir "
+        declare i8 @llvm.ctpop.i8(i8)
+        declare i16 @llvm.ctpop.i16(i16)
+        declare i32 @llvm.ctpop.i32(i32)
+        declare i64 @llvm.ctpop.i64(i64)
 
-#[cfg(target_endian = "little")] pub fn to_be16(x: i16) -> i16 { unsafe { bswap16(x) } }
+        declare i8 @llvm.ctlz.i8(i8, i1)
+        declare i16 @llvm.ctlz.i16(i16, i1)
+        declare i32 @llvm.ctlz.i32(i32, i1)
+        declare i64 @llvm.ctlz.i64(i64, i1)
+
+        declare i8 @llvm.cttz.i8(i8, i1)
+        declare i16 @llvm.cttz.i16(i16, i1)
+        declare i32 @llvm.cttz.i32(i32, i1)
+        declare i64 @llvm.cttz.i64(i64, i1)
+
+        declare i16 @llvm.bswap.i16(i16)
+        declare i32 @llvm.bswap.i32(i32)
+        declare i64 @llvm.bswap.i64(i64)
+
+        declare float @llvm.sqrt.f32(float)
+        declare double @llvm.sqrt.f64(double)
+
+        declare float @llvm.powi.f32(float, i32)
+        declare double @llvm.powi.f64(double, i32)
+
+        declare float @llvm.sin.f32(float)
+        declare double @llvm.sin.f64(double)
+
+        declare float @llvm.cos.f32(float)
+        declare double @llvm.cos.f64(double)
+
+        declare float @llvm.pow.f32(float, float)
+        declare double @llvm.pow.f64(double, double)
+
+        declare float @llvm.exp.f32(float)
+        declare double @llvm.exp.f64(double)
+
+        declare float @llvm.exp2.f32(float)
+        declare double @llvm.exp2.f64(double)
+
+        declare float @llvm.log.f32(float)
+        declare double @llvm.log.f64(double)
+
+        declare float @llvm.log10.f32(float)
+        declare double @llvm.log10.f64(double)
+
+        declare float @llvm.log2.f32(float)
+        declare double @llvm.log2.f64(double)
+
+        declare float @llvm.fma.f32(float, float, float)
+        declare double @llvm.fma.f64(double, double, double)
+
+        declare float @llvm.fabs.f32(float)
+        declare double @llvm.fabs.f64(double)
+
+        declare float @llvm.floor.f32(float)
+        declare double @llvm.floor.f64(double)
+
+        declare float @llvm.ceil.f32(float)
+        declare double @llvm.ceil.f64(double)
+
+        declare float @llvm.trunc.f32(float)
+        declare double @llvm.trunc.f64(double)
+
+        declare { i8,  i1 } @llvm.sadd.with.overflow.i8(i8, i8)
+        declare { i16, i1 } @llvm.sadd.with.overflow.i16(i16, i16)
+        declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)
+        declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64)
+
+        declare { i8,  i1 } @llvm.uadd.with.overflow.i8(i8, i8)
+        declare { i16, i1 } @llvm.uadd.with.overflow.i16(i16, i16)
+        declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
+        declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64)
+
+        declare { i8,  i1 } @llvm.ssub.with.overflow.i8(i8, i8)
+        declare { i16, i1 } @llvm.ssub.with.overflow.i16(i16, i16)
+        declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32)
+        declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64)
+
+        declare { i8,  i1 } @llvm.usub.with.overflow.i8(i8, i8)
+        declare { i16, i1 } @llvm.usub.with.overflow.i16(i16, i16)
+        declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
+        declare { i64, i1 } @llvm.usub.with.overflow.i64(i64, i64)
+
+        declare { i8,  i1 } @llvm.smul.with.overflow.i8(i8, i8)
+        declare { i16, i1 } @llvm.smul.with.overflow.i16(i16, i16)
+        declare { i32, i1 } @llvm.smul.with.overflow.i32(i32, i32)
+        declare { i64, i1 } @llvm.smul.with.overflow.i64(i64, i64)
+
+        declare { i8,  i1 } @llvm.umul.with.overflow.i8(i8, i8)
+        declare { i16, i1 } @llvm.umul.with.overflow.i16(i16, i16)
+        declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
+        declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64)
+        ";
+    })
+}
+
+llvm!(extern {
+    fn llvm_ctpop8(x: i8) -> i8 {
+        "%r = call i8 @llvm.ctpop.i8(i8 %arg0)
+         ret i8 %r"
+    }
+
+    fn llvm_ctpop16(x: i16) -> i16 {
+        "%r = call i16 @llvm.ctpop.i16(i16 %arg0)
+         ret i16 %r"
+    }
+
+    fn llvm_ctpop32(x: i32) -> i32 {
+        "%r = call i32 @llvm.ctpop.i32(i32 %arg0)
+         ret i32 %r"
+    }
+
+    fn llvm_ctpop64(x: i64) -> i64 {
+        "%r = call i64 @llvm.ctpop.i64(i64 %arg0)
+         ret i64 %r"
+    }
+
+    fn llvm_ctlz8(x: i8) -> i8 {
+        "%r = call i8 @llvm.ctlz.i8(i8 %arg0, i1 0)
+         ret i8 %r"
+    }
+
+    fn llvm_ctlz16(x: i16) -> i16 {
+        "%r = call i16 @llvm.ctlz.i16(i16 %arg0, i1 0)
+         ret i16 %r"
+    }
+
+    fn llvm_ctlz32(x: i32) -> i32 {
+        "%r = call i32 @llvm.ctlz.i32(i32 %arg0, i1 0)
+         ret i32 %r"
+    }
+
+    fn llvm_ctlz64(x: i64) -> i64 {
+        "%r = call i64 @llvm.ctlz.i64(i64 %arg0, i1 0)
+         ret i64 %r"
+    }
+
+    fn llvm_cttz8(x: i8) -> i8 {
+        "%r = call i8 @llvm.cttz.i8(i8 %arg0, i1 0)
+         ret i8 %r"
+    }
+
+    fn llvm_cttz16(x: i16) -> i16 {
+        "%r = call i16 @llvm.cttz.i16(i16 %arg0, i1 0)
+         ret i16 %r"
+    }
+
+    fn llvm_cttz32(x: i32) -> i32 {
+        "%r = call i32 @llvm.cttz.i32(i32 %arg0, i1 0)
+         ret i32 %r"
+    }
+
+    fn llvm_cttz64(x: i64) -> i64 {
+        "%r = call i64 @llvm.cttz.i64(i64 %arg0, i1 0)
+         ret i64 %r"
+    }
+
+    fn llvm_bswap16(x: i16) -> i16 {
+        "%r = call i16 @llvm.bswap.i16(i16 %arg0)
+         ret i16 %r"
+    }
+
+    fn llvm_bswap32(x: i32) -> i32 {
+        "%r = call i32 @llvm.bswap.i32(i32 %arg0)
+         ret i32 %r"
+    }
+
+    fn llvm_bswap64(x: i64) -> i64 {
+        "%r = call i64 @llvm.bswap.i64(i64 %arg0)
+         ret i64 %r"
+    }
+
+    fn llvm_sqrtf32(x: f32) -> f32 {
+        "%r = call float @llvm.sqrt.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_sqrtf64(x: f64) -> f64 {
+        "%r = call double @llvm.sqrt.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_powif32(a: f32, x: i32) -> f32 {
+        "%r = call float @llvm.powi.f32(float %arg0, i32 %arg1)
+         ret float %r"
+    }
+
+    fn llvm_powif64(a: f64, x: i32) -> f64 {
+        "%r = call double @llvm.powi.f64(double %arg0, i32 %arg1)
+         ret double %r"
+    }
+
+    fn llvm_sinf32(x: f32) -> f32 {
+        "%r = call float @llvm.sin.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_sinf64(x: f64) -> f64 {
+        "%r = call double @llvm.sin.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_cosf32(x: f32) -> f32 {
+        "%r = call float @llvm.cos.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_cosf64(x: f64) -> f64 {
+        "%r = call double @llvm.cos.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_powf32(a: f32, x: f32) -> f32 {
+        "%r = call float @llvm.pow.f32(float %arg0, float %arg1)
+         ret float %r"
+    }
+
+    fn llvm_powf64(a: f64, x: f64) -> f64 {
+        "%r = call double @llvm.pow.f64(double %arg0, double %arg1)
+         ret double %r"
+    }
+
+    fn llvm_expf32(x: f32) -> f32 {
+        "%r = call float @llvm.exp.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_expf64(x: f64) -> f64 {
+        "%r = call double @llvm.exp.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_exp2f32(x: f32) -> f32 {
+        "%r = call float @llvm.exp2.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_exp2f64(x: f64) -> f64 {
+        "%r = call double @llvm.exp2.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_logf32(x: f32) -> f32 {
+        "%r = call float @llvm.log.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_logf64(x: f64) -> f64 {
+        "%r = call double @llvm.log.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_log10f32(x: f32) -> f32 {
+        "%r = call float @llvm.log10.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_log10f64(x: f64) -> f64 {
+        "%r = call double @llvm.log10.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_log2f32(x: f32) -> f32 {
+        "%r = call float @llvm.log2.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_log2f64(x: f64) -> f64 {
+        "%r = call double @llvm.log2.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_fmaf32(a: f32, b: f32, c: f32) -> f32 {
+        "%r = call float @llvm.fma.f32(float %arg0, float %arg1, float %arg2)
+         ret float %r"
+    }
+
+    fn llvm_fmaf64(a: f64, b: f64, c: f64) -> f64 {
+        "%r = call double @llvm.fma.f64(double %arg0, double %arg1, double %arg2)
+         ret double %r"
+    }
+
+    fn llvm_fabsf32(x: f32) -> f32 {
+        "%r = call float @llvm.fabs.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_fabsf64(x: f64) -> f64 {
+        "%r = call double @llvm.fabs.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_floorf32(x: f32) -> f32 {
+        "%r = call float @llvm.floor.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_floorf64(x: f64) -> f64 {
+        "%r = call double @llvm.floor.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_ceilf32(x: f32) -> f32 {
+        "%r = call float @llvm.ceil.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_ceilf64(x: f64) -> f64 {
+        "%r = call double @llvm.ceil.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_truncf32(x: f32) -> f32 {
+        "%r = call float @llvm.trunc.f32(float %arg0)
+         ret float %r"
+    }
+
+    fn llvm_truncf64(x: f64) -> f64 {
+        "%r = call double @llvm.trunc.f64(double %arg0)
+         ret double %r"
+    }
+
+    fn llvm_i8_add_with_overflow(r: *mut (i8, bool), x: i8, y: i8) {
+        "%s = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %arg1, i8 %arg2)
+         %m = bitcast { i8, i8 }* %arg0 to { i8, i1 }*
+         store { i8, i1 } %s, { i8, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_i16_add_with_overflow(r: *mut (i16, bool), x: i16, y: i16) {
+        "%s = call { i16, i1 } @llvm.sadd.with.overflow.i16(i16 %arg1, i16 %arg2)
+         %m = bitcast { i16, i8 }* %arg0 to { i16, i1 }*
+         store { i16, i1 } %s, { i16, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_i32_add_with_overflow(r: *mut (i32, bool), x: i32, y: i32) {
+        "%s = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %arg1, i32 %arg2)
+         %m = bitcast { i32, i8 }* %arg0 to { i32, i1 }*
+         store { i32, i1 } %s, { i32, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_i64_add_with_overflow(r: *mut (i64, bool), x: i64, y: i64) {
+        "%s = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %arg1, i64 %arg2)
+         %m = bitcast { i64, i8 }* %arg0 to { i64, i1 }*
+         store { i64, i1 } %s, { i64, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u8_add_with_overflow(r: *mut (u8, bool), x: u8, y: u8) {
+        "%s = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %arg1, i8 %arg2)
+         %m = bitcast { i8, i8 }* %arg0 to { i8, i1 }*
+         store { i8, i1 } %s, { i8, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u16_add_with_overflow(r: *mut (u16, bool), x: u16, y: u16) {
+        "%s = call { i16, i1 } @llvm.uadd.with.overflow.i16(i16 %arg1, i16 %arg2)
+         %m = bitcast { i16, i8 }* %arg0 to { i16, i1 }*
+         store { i16, i1 } %s, { i16, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u32_add_with_overflow(r: *mut (u32, bool), x: u32, y: u32) {
+        "%s = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %arg1, i32 %arg2)
+         %m = bitcast { i32, i8 }* %arg0 to { i32, i1 }*
+         store { i32, i1 } %s, { i32, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u64_add_with_overflow(r: *mut (u64, bool), x: u64, y: u64) {
+        "%s = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %arg1, i64 %arg2)
+         %m = bitcast { i64, i8 }* %arg0 to { i64, i1 }*
+         store { i64, i1 } %s, { i64, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_i8_sub_with_overflow(r: *mut (i8, bool), x: i8, y: i8) {
+        "%s = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %arg1, i8 %arg2)
+         %m = bitcast { i8, i8 }* %arg0 to { i8, i1 }*
+         store { i8, i1 } %s, { i8, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_i16_sub_with_overflow(r: *mut (i16, bool), x: i16, y: i16) {
+        "%s = call { i16, i1 } @llvm.ssub.with.overflow.i16(i16 %arg1, i16 %arg2)
+         %m = bitcast { i16, i8 }* %arg0 to { i16, i1 }*
+         store { i16, i1 } %s, { i16, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_i32_sub_with_overflow(r: *mut (i32, bool), x: i32, y: i32) {
+        "%s = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %arg1, i32 %arg2)
+         %m = bitcast { i32, i8 }* %arg0 to { i32, i1 }*
+         store { i32, i1 } %s, { i32, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_i64_sub_with_overflow(r: *mut (i64, bool), x: i64, y: i64) {
+        "%s = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 %arg1, i64 %arg2)
+         %m = bitcast { i64, i8 }* %arg0 to { i64, i1 }*
+         store { i64, i1 } %s, { i64, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u8_sub_with_overflow(r: *mut (u8, bool), x: u8, y: u8) {
+        "%s = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 %arg1, i8 %arg2)
+         %m = bitcast { i8, i8 }* %arg0 to { i8, i1 }*
+         store { i8, i1 } %s, { i8, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u16_sub_with_overflow(r: *mut (u16, bool), x: u16, y: u16) {
+        "%s = call { i16, i1 } @llvm.usub.with.overflow.i16(i16 %arg1, i16 %arg2)
+         %m = bitcast { i16, i8 }* %arg0 to { i16, i1 }*
+         store { i16, i1 } %s, { i16, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u32_sub_with_overflow(r: *mut (u32, bool), x: u32, y: u32) {
+        "%s = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %arg1, i32 %arg2)
+         %m = bitcast { i32, i8 }* %arg0 to { i32, i1 }*
+         store { i32, i1 } %s, { i32, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u64_sub_with_overflow(r: *mut (u64, bool), x: u64, y: u64) {
+        "%s = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %arg1, i64 %arg2)
+         %m = bitcast { i64, i8 }* %arg0 to { i64, i1 }*
+         store { i64, i1 } %s, { i64, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_i8_mul_with_overflow(r: *mut (i8, bool), x: i8, y: i8) {
+        "%s = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %arg1, i8 %arg2)
+         %m = bitcast { i8, i8 }* %arg0 to { i8, i1 }*
+         store { i8, i1 } %s, { i8, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_i16_mul_with_overflow(r: *mut (i16, bool), x: i16, y: i16) {
+        "%s = call { i16, i1 } @llvm.smul.with.overflow.i16(i16 %arg1, i16 %arg2)
+         %m = bitcast { i16, i8 }* %arg0 to { i16, i1 }*
+         store { i16, i1 } %s, { i16, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_i32_mul_with_overflow(r: *mut (i32, bool), x: i32, y: i32) {
+        "%s = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %arg1, i32 %arg2)
+         %m = bitcast { i32, i8 }* %arg0 to { i32, i1 }*
+         store { i32, i1 } %s, { i32, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_i64_mul_with_overflow(r: *mut (i64, bool), x: i64, y: i64) {
+        "%s = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %arg1, i64 %arg2)
+         %m = bitcast { i64, i8 }* %arg0 to { i64, i1 }*
+         store { i64, i1 } %s, { i64, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u8_mul_with_overflow(r: *mut (u8, bool), x: u8, y: u8) {
+        "%s = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %arg1, i8 %arg2)
+         %m = bitcast { i8, i8 }* %arg0 to { i8, i1 }*
+         store { i8, i1 } %s, { i8, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u16_mul_with_overflow(r: *mut (u16, bool), x: u16, y: u16) {
+        "%s = call { i16, i1 } @llvm.umul.with.overflow.i16(i16 %arg1, i16 %arg2)
+         %m = bitcast { i16, i8 }* %arg0 to { i16, i1 }*
+         store { i16, i1 } %s, { i16, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u32_mul_with_overflow(r: *mut (u32, bool), x: u32, y: u32) {
+        "%s = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %arg1, i32 %arg2)
+         %m = bitcast { i32, i8 }* %arg0 to { i32, i1 }*
+         store { i32, i1 } %s, { i32, i1 }* %m
+         ret void"
+    }
+
+    fn llvm_u64_mul_with_overflow(r: *mut (u64, bool), x: u64, y: u64) {
+        "%s = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %arg1, i64 %arg2)
+         %m = bitcast { i64, i8 }* %arg0 to { i64, i1 }*
+         store { i64, i1 } %s, { i64, i1 }* %m
+         ret void"
+    }
+})
+
+#[fixed_stack_segment] pub fn ctpop8(x: i8) -> i8 { unsafe { llvm_ctpop8(x) } }
+#[fixed_stack_segment] pub fn ctpop16(x: i16) -> i16 { unsafe { llvm_ctpop16(x) } }
+#[fixed_stack_segment] pub fn ctpop32(x: i32) -> i32 { unsafe { llvm_ctpop32(x) } }
+#[fixed_stack_segment] pub fn ctpop64(x: i64) -> i64 { unsafe { llvm_ctpop64(x) } }
+
+#[fixed_stack_segment] pub fn ctlz8(x: i8) -> i8 { unsafe { llvm_ctlz8(x) } }
+#[fixed_stack_segment] pub fn ctlz16(x: i16) -> i16 { unsafe { llvm_ctlz16(x) } }
+#[fixed_stack_segment] pub fn ctlz32(x: i32) -> i32 { unsafe { llvm_ctlz32(x) } }
+#[fixed_stack_segment] pub fn ctlz64(x: i64) -> i64 { unsafe { llvm_ctlz64(x) } }
+
+#[fixed_stack_segment] pub fn cttz8(x: i8) -> i8 { unsafe { llvm_cttz8(x) } }
+#[fixed_stack_segment] pub fn cttz16(x: i16) -> i16 { unsafe { llvm_cttz16(x) } }
+#[fixed_stack_segment] pub fn cttz32(x: i32) -> i32 { unsafe { llvm_cttz32(x) } }
+#[fixed_stack_segment] pub fn cttz64(x: i64) -> i64 { unsafe { llvm_cttz64(x) } }
+
+#[fixed_stack_segment] pub fn bswap16(x: i16) -> i16 { unsafe { llvm_bswap16(x) } }
+#[fixed_stack_segment] pub fn bswap32(x: i32) -> i32 { unsafe { llvm_bswap32(x) } }
+#[fixed_stack_segment] pub fn bswap64(x: i64) -> i64 { unsafe { llvm_bswap64(x) } }
+
+#[fixed_stack_segment] pub fn sqrtf32(x: f32) -> f32 { unsafe { llvm_sqrtf32(x) } }
+#[fixed_stack_segment] pub fn sqrtf64(x: f64) -> f64 { unsafe { llvm_sqrtf64(x) } }
+
+#[fixed_stack_segment] pub fn powif32(a: f32, x: i32) -> f32 { unsafe { llvm_powif32(a, x) } }
+#[fixed_stack_segment] pub fn powif64(a: f64, x: i32) -> f64 { unsafe { llvm_powif64(a, x) } }
+
+#[fixed_stack_segment] pub fn sinf32(x: f32) -> f32 { unsafe { llvm_sinf32(x) } }
+#[fixed_stack_segment] pub fn sinf64(x: f64) -> f64 { unsafe { llvm_sinf64(x) } }
+
+#[fixed_stack_segment] pub fn cosf32(x: f32) -> f32 { unsafe { llvm_cosf32(x) } }
+#[fixed_stack_segment] pub fn cosf64(x: f64) -> f64 { unsafe { llvm_cosf64(x) } }
+
+#[fixed_stack_segment] pub fn powf32(a: f32, x: f32) -> f32 { unsafe { llvm_powf32(a, x) } }
+#[fixed_stack_segment] pub fn powf64(a: f64, x: f64) -> f64 { unsafe { llvm_powf64(a, x) } }
+
+#[fixed_stack_segment] pub fn expf32(x: f32) -> f32 { unsafe { llvm_expf32(x) } }
+#[fixed_stack_segment] pub fn expf64(x: f64) -> f64 { unsafe { llvm_expf64(x) } }
+
+#[fixed_stack_segment] pub fn exp2f32(x: f32) -> f32 { unsafe { llvm_exp2f32(x) } }
+#[fixed_stack_segment] pub fn exp2f64(x: f64) -> f64 { unsafe { llvm_exp2f64(x) } }
+
+#[fixed_stack_segment] pub fn logf32(x: f32) -> f32 { unsafe { llvm_logf32(x) } }
+#[fixed_stack_segment] pub fn logf64(x: f64) -> f64 { unsafe { llvm_logf64(x) } }
+
+#[fixed_stack_segment] pub fn log10f32(x: f32) -> f32 { unsafe { llvm_log10f32(x) } }
+#[fixed_stack_segment] pub fn log10f64(x: f64) -> f64 { unsafe { llvm_log10f64(x) } }
+
+#[fixed_stack_segment] pub fn log2f32(x: f32) -> f32 { unsafe { llvm_log2f32(x) } }
+#[fixed_stack_segment] pub fn log2f64(x: f64) -> f64 { unsafe { llvm_log2f64(x) } }
+
+#[fixed_stack_segment] pub fn fmaf32(a: f32, b: f32, c: f32) -> f32 { unsafe {
+    llvm_fmaf32(a, b, c)
+}}
+#[fixed_stack_segment] pub fn fmaf64(a: f64, b: f64, c: f64) -> f64 { unsafe {
+    llvm_fmaf64(a, b, c)
+}}
+
+#[fixed_stack_segment] pub fn fabsf32(x: f32) -> f32 { unsafe { llvm_fabsf32(x) } }
+#[fixed_stack_segment] pub fn fabsf64(x: f64) -> f64 { unsafe { llvm_fabsf64(x) } }
+
+#[fixed_stack_segment] pub fn floorf32(x: f32) -> f32 { unsafe { llvm_floorf32(x) } }
+#[fixed_stack_segment] pub fn floorf64(x: f64) -> f64 { unsafe { llvm_floorf64(x) } }
+
+#[fixed_stack_segment] pub fn ceilf32(x: f32) -> f32 { unsafe { llvm_ceilf32(x) } }
+#[fixed_stack_segment] pub fn ceilf64(x: f64) -> f64 { unsafe { llvm_ceilf64(x) } }
+
+#[fixed_stack_segment] pub fn truncf32(x: f32) -> f32 { unsafe { llvm_truncf32(x) } }
+#[fixed_stack_segment] pub fn truncf64(x: f64) -> f64 { unsafe { llvm_truncf64(x) } }
+
+#[fixed_stack_segment] pub fn i8_add_with_overflow(x: i8, y: i8) -> (i8, bool) { unsafe {
+    let mut r = (0i8, true); llvm_i8_add_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn i16_add_with_overflow(x: i16, y: i16) -> (i16, bool) { unsafe {
+    let mut r = (0i16, true); llvm_i16_add_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn i32_add_with_overflow(x: i32, y: i32) -> (i32, bool) { unsafe {
+    let mut r = (0i32, true); llvm_i32_add_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn i64_add_with_overflow(x: i64, y: i64) -> (i64, bool) { unsafe {
+    let mut r = (0i64, true); llvm_i64_add_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u8_add_with_overflow(x: u8, y: u8) -> (u8, bool) { unsafe {
+    let mut r = (0u8, true); llvm_u8_add_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u16_add_with_overflow(x: u16, y: u16) -> (u16, bool) { unsafe {
+    let mut r = (0u16, true); llvm_u16_add_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u32_add_with_overflow(x: u32, y: u32) -> (u32, bool) { unsafe {
+    let mut r = (0u32, true); llvm_u32_add_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u64_add_with_overflow(x: u64, y: u64) -> (u64, bool) { unsafe {
+    let mut r = (0u64, true); llvm_u64_add_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+
+#[fixed_stack_segment] pub fn i8_sub_with_overflow(x: i8, y: i8) -> (i8, bool) { unsafe {
+    let mut r = (0i8, true); llvm_i8_sub_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn i16_sub_with_overflow(x: i16, y: i16) -> (i16, bool) { unsafe {
+    let mut r = (0i16, true); llvm_i16_sub_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn i32_sub_with_overflow(x: i32, y: i32) -> (i32, bool) { unsafe {
+    let mut r = (0i32, true); llvm_i32_sub_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn i64_sub_with_overflow(x: i64, y: i64) -> (i64, bool) { unsafe {
+    let mut r = (0i64, true); llvm_i64_sub_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u8_sub_with_overflow(x: u8, y: u8) -> (u8, bool) { unsafe {
+    let mut r = (0u8, true); llvm_u8_sub_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u16_sub_with_overflow(x: u16, y: u16) -> (u16, bool) { unsafe {
+    let mut r = (0u16, true); llvm_u16_sub_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u32_sub_with_overflow(x: u32, y: u32) -> (u32, bool) { unsafe {
+    let mut r = (0u32, true); llvm_u32_sub_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u64_sub_with_overflow(x: u64, y: u64) -> (u64, bool) { unsafe {
+    let mut r = (0u64, true); llvm_u64_sub_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+
+#[fixed_stack_segment] pub fn i8_mul_with_overflow(x: i8, y: i8) -> (i8, bool) { unsafe {
+    let mut r = (0i8, true); llvm_i8_mul_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn i16_mul_with_overflow(x: i16, y: i16) -> (i16, bool) { unsafe {
+    let mut r = (0i16, true); llvm_i16_mul_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn i32_mul_with_overflow(x: i32, y: i32) -> (i32, bool) { unsafe {
+    let mut r = (0i32, true); llvm_i32_mul_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn i64_mul_with_overflow(x: i64, y: i64) -> (i64, bool) { unsafe {
+    let mut r = (0i64, true); llvm_i64_mul_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u8_mul_with_overflow(x: u8, y: u8) -> (u8, bool) { unsafe {
+    let mut r = (0u8, true); llvm_u8_mul_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u16_mul_with_overflow(x: u16, y: u16) -> (u16, bool) { unsafe {
+    let mut r = (0u16, true); llvm_u16_mul_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u32_mul_with_overflow(x: u32, y: u32) -> (u32, bool) { unsafe {
+    let mut r = (0u32, true); llvm_u32_mul_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+#[fixed_stack_segment] pub fn u64_mul_with_overflow(x: u64, y: u64) -> (u64, bool) { unsafe {
+    let mut r = (0u64, true); llvm_u64_mul_with_overflow(ptr::to_mut_unsafe_ptr(&mut r), x, y); r
+}}
+
+#[cfg(target_endian = "little")] pub fn to_le16(x: i16) -> i16 { x }
+#[cfg(target_endian = "big")]    pub fn to_le16(x: i16) -> i16 { bswap16(x) }
+#[cfg(target_endian = "little")] pub fn to_le32(x: i32) -> i32 { x }
+#[cfg(target_endian = "big")]    pub fn to_le32(x: i32) -> i32 { bswap32(x) }
+#[cfg(target_endian = "little")] pub fn to_le64(x: i64) -> i64 { x }
+#[cfg(target_endian = "big")]    pub fn to_le64(x: i64) -> i64 { bswap64(x) }
+
+#[cfg(target_endian = "little")] pub fn to_be16(x: i16) -> i16 { bswap16(x) }
 #[cfg(target_endian = "big")]    pub fn to_be16(x: i16) -> i16 { x }
-#[cfg(target_endian = "little")] pub fn to_be32(x: i32) -> i32 { unsafe { bswap32(x) } }
+#[cfg(target_endian = "little")] pub fn to_be32(x: i32) -> i32 { bswap32(x) }
 #[cfg(target_endian = "big")]    pub fn to_be32(x: i32) -> i32 { x }
-#[cfg(target_endian = "little")] pub fn to_be64(x: i64) -> i64 { unsafe { bswap64(x) } }
+#[cfg(target_endian = "little")] pub fn to_be64(x: i64) -> i64 { bswap64(x) }
 #[cfg(target_endian = "big")]    pub fn to_be64(x: i64) -> i64 { x }

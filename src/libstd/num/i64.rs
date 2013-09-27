@@ -23,34 +23,30 @@ int_module!(i64, 64)
 impl BitCount for i64 {
     /// Counts the number of bits set. Wraps LLVM's `ctpop` intrinsic.
     #[inline]
-    fn population_count(&self) -> i64 { unsafe { intrinsics::ctpop64(*self) } }
+    fn population_count(&self) -> i64 { intrinsics::ctpop64(*self) }
 
     /// Counts the number of leading zeros. Wraps LLVM's `ctlz` intrinsic.
     #[inline]
-    fn leading_zeros(&self) -> i64 { unsafe { intrinsics::ctlz64(*self) } }
+    fn leading_zeros(&self) -> i64 { intrinsics::ctlz64(*self) }
 
     /// Counts the number of trailing zeros. Wraps LLVM's `cttz` intrinsic.
     #[inline]
-    fn trailing_zeros(&self) -> i64 { unsafe { intrinsics::cttz64(*self) } }
+    fn trailing_zeros(&self) -> i64 { intrinsics::cttz64(*self) }
 }
 
 impl CheckedAdd for i64 {
     #[inline]
     fn checked_add(&self, v: &i64) -> Option<i64> {
-        unsafe {
-            let (x, y) = intrinsics::i64_add_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i64_add_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }
 
 impl CheckedSub for i64 {
     #[inline]
     fn checked_sub(&self, v: &i64) -> Option<i64> {
-        unsafe {
-            let (x, y) = intrinsics::i64_sub_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i64_sub_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }
 
@@ -59,9 +55,7 @@ impl CheckedSub for i64 {
 impl CheckedMul for i64 {
     #[inline]
     fn checked_mul(&self, v: &i64) -> Option<i64> {
-        unsafe {
-            let (x, y) = intrinsics::i64_mul_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i64_mul_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }

@@ -10,45 +10,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-mod rusti {
-    #[abi = "rust-intrinsic"]
-    extern "rust-intrinsic" {
-        pub fn sqrtf32(x: f32) -> f32;
-        pub fn sqrtf64(x: f64) -> f64;
-        pub fn powif32(a: f32, x: i32) -> f32;
-        pub fn powif64(a: f64, x: i32) -> f64;
-        pub fn sinf32(x: f32) -> f32;
-        pub fn sinf64(x: f64) -> f64;
-        pub fn cosf32(x: f32) -> f32;
-        pub fn cosf64(x: f64) -> f64;
-        pub fn powf32(a: f32, x: f32) -> f32;
-        pub fn powf64(a: f64, x: f64) -> f64;
-        pub fn expf32(x: f32) -> f32;
-        pub fn expf64(x: f64) -> f64;
-        pub fn exp2f32(x: f32) -> f32;
-        pub fn exp2f64(x: f64) -> f64;
-        pub fn logf32(x: f32) -> f32;
-        pub fn logf64(x: f64) -> f64;
-        pub fn log10f32(x: f32) -> f32;
-        pub fn log10f64(x: f64) -> f64;
-        pub fn log2f32(x: f32) -> f32;
-        pub fn log2f64(x: f64) -> f64;
-        pub fn fmaf32(a: f32, b: f32, c: f32) -> f32;
-        pub fn fmaf64(a: f64, b: f64, c: f64) -> f64;
-        pub fn fabsf32(x: f32) -> f32;
-        pub fn fabsf64(x: f64) -> f64;
-        pub fn floorf32(x: f32) -> f32;
-        pub fn floorf64(x: f64) -> f64;
-        pub fn ceilf32(x: f32) -> f32;
-        pub fn ceilf64(x: f64) -> f64;
-        pub fn truncf32(x: f32) -> f32;
-        pub fn truncf64(x: f64) -> f64;
-    }
-}
-
 pub fn main() {
     unsafe {
-        use rusti::*;
+        use std::unstable::intrinsics::*;
 
         use std::f32;
         use std::f64;
@@ -92,15 +56,10 @@ pub fn main() {
         assert!((floorf32(3.8f32).approx_eq(&3.0f32)));
         assert!((floorf64(-1.1f64).approx_eq(&-2.0f64)));
 
-        // Causes linker error
-        // undefined reference to llvm.ceil.f32/64
-        //assert!((ceilf32(-2.3f32) == -2.0f32));
-        //assert!((ceilf64(3.8f64) == 4.0f64));
+        assert!((ceilf32(-2.3f32) == -2.0f32));
+        assert!((ceilf64(3.8f64) == 4.0f64));
 
-        // Causes linker error
-        // undefined reference to llvm.trunc.f32/64
-        //assert!((truncf32(0.1f32) == 0.0f32));
-        //assert!((truncf64(-0.1f64) == 0.0f64));
+        assert!((truncf32(0.1f32) == 0.0f32));
+        assert!((truncf64(-0.1f64) == 0.0f64));
     }
-
 }

@@ -23,20 +23,16 @@ uint_module!(u64, i64, 64)
 impl CheckedAdd for u64 {
     #[inline]
     fn checked_add(&self, v: &u64) -> Option<u64> {
-        unsafe {
-            let (x, y) = intrinsics::u64_add_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::u64_add_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }
 
 impl CheckedSub for u64 {
     #[inline]
     fn checked_sub(&self, v: &u64) -> Option<u64> {
-        unsafe {
-            let (x, y) = intrinsics::u64_sub_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::u64_sub_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }
 
@@ -45,9 +41,7 @@ impl CheckedSub for u64 {
 impl CheckedMul for u64 {
     #[inline]
     fn checked_mul(&self, v: &u64) -> Option<u64> {
-        unsafe {
-            let (x, y) = intrinsics::u64_mul_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::u64_mul_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }

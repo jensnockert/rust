@@ -2746,8 +2746,11 @@ macro_rules! ifn (
 )
 
 pub fn declare_intrinsics(llmod: ModuleRef) -> HashMap<&'static str, ValueRef> {
-    let i8p = Type::i8p();
     let mut intrinsics = HashMap::new();
+    let i8p = Type::i8p();
+
+    ifn!(intrinsics, "llvm.trap", [], Type::void());
+    ifn!(intrinsics, "llvm.frameaddress", [Type::i32()], Type::i8p());
 
     ifn!(intrinsics, "llvm.memcpy.p0i8.p0i8.i32",
          [i8p, i8p, Type::i32(), Type::i32(), Type::i1()], Type::void());
@@ -2761,116 +2764,6 @@ pub fn declare_intrinsics(llmod: ModuleRef) -> HashMap<&'static str, ValueRef> {
          [i8p, Type::i8(), Type::i32(), Type::i32(), Type::i1()], Type::void());
     ifn!(intrinsics, "llvm.memset.p0i8.i64",
          [i8p, Type::i8(), Type::i64(), Type::i32(), Type::i1()], Type::void());
-
-    ifn!(intrinsics, "llvm.trap", [], Type::void());
-    ifn!(intrinsics, "llvm.frameaddress", [Type::i32()], i8p);
-
-    ifn!(intrinsics, "llvm.powi.f32", [Type::f32(), Type::i32()], Type::f32());
-    ifn!(intrinsics, "llvm.powi.f64", [Type::f64(), Type::i32()], Type::f64());
-    ifn!(intrinsics, "llvm.pow.f32",  [Type::f32(), Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.pow.f64",  [Type::f64(), Type::f64()], Type::f64());
-
-    ifn!(intrinsics, "llvm.sqrt.f32", [Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.sqrt.f64", [Type::f64()], Type::f64());
-    ifn!(intrinsics, "llvm.sin.f32",  [Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.sin.f64",  [Type::f64()], Type::f64());
-    ifn!(intrinsics, "llvm.cos.f32",  [Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.cos.f64",  [Type::f64()], Type::f64());
-    ifn!(intrinsics, "llvm.exp.f32",  [Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.exp.f64",  [Type::f64()], Type::f64());
-    ifn!(intrinsics, "llvm.exp2.f32", [Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.exp2.f64", [Type::f64()], Type::f64());
-    ifn!(intrinsics, "llvm.log.f32",  [Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.log.f64",  [Type::f64()], Type::f64());
-    ifn!(intrinsics, "llvm.log10.f32",[Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.log10.f64",[Type::f64()], Type::f64());
-    ifn!(intrinsics, "llvm.log2.f32", [Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.log2.f64", [Type::f64()], Type::f64());
-
-    ifn!(intrinsics, "llvm.fma.f32",  [Type::f32(), Type::f32(), Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.fma.f64",  [Type::f64(), Type::f64(), Type::f64()], Type::f64());
-
-    ifn!(intrinsics, "llvm.fabs.f32", [Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.fabs.f64", [Type::f64()], Type::f64());
-    ifn!(intrinsics, "llvm.floor.f32",[Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.floor.f64",[Type::f64()], Type::f64());
-    ifn!(intrinsics, "llvm.ceil.f32", [Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.ceil.f64", [Type::f64()], Type::f64());
-    ifn!(intrinsics, "llvm.trunc.f32",[Type::f32()], Type::f32());
-    ifn!(intrinsics, "llvm.trunc.f64",[Type::f64()], Type::f64());
-
-    ifn!(intrinsics, "llvm.ctpop.i8", [Type::i8()], Type::i8());
-    ifn!(intrinsics, "llvm.ctpop.i16",[Type::i16()], Type::i16());
-    ifn!(intrinsics, "llvm.ctpop.i32",[Type::i32()], Type::i32());
-    ifn!(intrinsics, "llvm.ctpop.i64",[Type::i64()], Type::i64());
-
-    ifn!(intrinsics, "llvm.ctlz.i8",  [Type::i8() , Type::i1()], Type::i8());
-    ifn!(intrinsics, "llvm.ctlz.i16", [Type::i16(), Type::i1()], Type::i16());
-    ifn!(intrinsics, "llvm.ctlz.i32", [Type::i32(), Type::i1()], Type::i32());
-    ifn!(intrinsics, "llvm.ctlz.i64", [Type::i64(), Type::i1()], Type::i64());
-
-    ifn!(intrinsics, "llvm.cttz.i8",  [Type::i8() , Type::i1()], Type::i8());
-    ifn!(intrinsics, "llvm.cttz.i16", [Type::i16(), Type::i1()], Type::i16());
-    ifn!(intrinsics, "llvm.cttz.i32", [Type::i32(), Type::i1()], Type::i32());
-    ifn!(intrinsics, "llvm.cttz.i64", [Type::i64(), Type::i1()], Type::i64());
-
-    ifn!(intrinsics, "llvm.bswap.i16",[Type::i16()], Type::i16());
-    ifn!(intrinsics, "llvm.bswap.i32",[Type::i32()], Type::i32());
-    ifn!(intrinsics, "llvm.bswap.i64",[Type::i64()], Type::i64());
-
-    ifn!(intrinsics, "llvm.sadd.with.overflow.i8",
-        [Type::i8(), Type::i8()], Type::struct_([Type::i8(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.sadd.with.overflow.i16",
-        [Type::i16(), Type::i16()], Type::struct_([Type::i16(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.sadd.with.overflow.i32",
-        [Type::i32(), Type::i32()], Type::struct_([Type::i32(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.sadd.with.overflow.i64",
-        [Type::i64(), Type::i64()], Type::struct_([Type::i64(), Type::i1()], false));
-
-    ifn!(intrinsics, "llvm.uadd.with.overflow.i8",
-        [Type::i8(), Type::i8()], Type::struct_([Type::i8(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.uadd.with.overflow.i16",
-        [Type::i16(), Type::i16()], Type::struct_([Type::i16(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.uadd.with.overflow.i32",
-        [Type::i32(), Type::i32()], Type::struct_([Type::i32(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.uadd.with.overflow.i64",
-        [Type::i64(), Type::i64()], Type::struct_([Type::i64(), Type::i1()], false));
-
-    ifn!(intrinsics, "llvm.ssub.with.overflow.i8",
-        [Type::i8(), Type::i8()], Type::struct_([Type::i8(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.ssub.with.overflow.i16",
-        [Type::i16(), Type::i16()], Type::struct_([Type::i16(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.ssub.with.overflow.i32",
-        [Type::i32(), Type::i32()], Type::struct_([Type::i32(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.ssub.with.overflow.i64",
-        [Type::i64(), Type::i64()], Type::struct_([Type::i64(), Type::i1()], false));
-
-    ifn!(intrinsics, "llvm.usub.with.overflow.i8",
-        [Type::i8(), Type::i8()], Type::struct_([Type::i8(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.usub.with.overflow.i16",
-        [Type::i16(), Type::i16()], Type::struct_([Type::i16(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.usub.with.overflow.i32",
-        [Type::i32(), Type::i32()], Type::struct_([Type::i32(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.usub.with.overflow.i64",
-        [Type::i64(), Type::i64()], Type::struct_([Type::i64(), Type::i1()], false));
-
-    ifn!(intrinsics, "llvm.smul.with.overflow.i8",
-        [Type::i8(), Type::i8()], Type::struct_([Type::i8(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.smul.with.overflow.i16",
-        [Type::i16(), Type::i16()], Type::struct_([Type::i16(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.smul.with.overflow.i32",
-        [Type::i32(), Type::i32()], Type::struct_([Type::i32(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.smul.with.overflow.i64",
-        [Type::i64(), Type::i64()], Type::struct_([Type::i64(), Type::i1()], false));
-
-    ifn!(intrinsics, "llvm.umul.with.overflow.i8",
-        [Type::i8(), Type::i8()], Type::struct_([Type::i8(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.umul.with.overflow.i16",
-        [Type::i16(), Type::i16()], Type::struct_([Type::i16(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.umul.with.overflow.i32",
-        [Type::i32(), Type::i32()], Type::struct_([Type::i32(), Type::i1()], false));
-    ifn!(intrinsics, "llvm.umul.with.overflow.i64",
-        [Type::i64(), Type::i64()], Type::struct_([Type::i64(), Type::i1()], false));
 
     return intrinsics;
 }

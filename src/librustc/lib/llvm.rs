@@ -1863,7 +1863,11 @@ pub mod llvm {
         pub fn LLVMRustAddRawIR(M: ModuleRef, code: *c_char) -> bool;
 
         #[fast_ffi]
-        pub fn LLVMRustCreateIRFunction(M: ModuleRef, f: TypeRef, name: *c_char, code: *c_char) -> bool;
+        pub fn LLVMRustCreateIRFunction(M: ModuleRef,
+                                        f: TypeRef,
+                                        name: *c_char,
+                                        code: *c_char)
+                                        -> bool;
 
         #[fast_ffi]
         pub fn LLVMStructCreateNamed(C: ContextRef, Name: *c_char) -> TypeRef;

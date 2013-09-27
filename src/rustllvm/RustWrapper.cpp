@@ -840,7 +840,7 @@ extern "C" bool LLVMRustCreateIRFunction(LLVMModuleRef M, LLVMTypeRef f, const c
     }
     free(arguments);
 
-    stream << ") {\n" << code << "\n}";
+    stream << ") alwaysinline {\n" << code << "\n}";
 
     return LLVMRustAddRawIR(M, stream.str().c_str());
 }

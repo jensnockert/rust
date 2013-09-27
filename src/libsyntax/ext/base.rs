@@ -222,7 +222,6 @@ pub fn syntax_expander_table() -> SyntaxEnv {
                             builtin_normal_tt_no_ctxt(ext::asm::expand_asm));
     syntax_expanders.insert(intern(&"llvm"),
                             builtin_normal_tt_no_ctxt(ext::ir_module::expand_ir_module));
-    
     syntax_expanders.insert(intern(&"cfg"),
                             builtin_normal_tt_no_ctxt(ext::cfg::expand_cfg));
     syntax_expanders.insert(

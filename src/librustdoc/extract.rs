@@ -149,6 +149,8 @@ fn nmoddoc_from_mod(
             fns.push(fndoc_from_fn(ItemDoc));
           }
           ast::foreign_item_static(*) => {} // XXX: Not implemented.
+          ast::foreign_item_raw_ir(*) => {} // XXX: Not implemented.
+          ast::foreign_item_ir_fn(*) => {} // XXX: Not implemented.
         }
     }
     doc::NmodDoc {

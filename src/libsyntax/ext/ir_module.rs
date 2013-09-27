@@ -59,15 +59,14 @@ pub fn expand_ir_module(cx: @ExtCtxt, sp: Span, tts: &[token_tree]) -> MacResult
     while p.eat_keyword(keywords::Fn) {
         let fn_id = p.parse_ident();
         let fn_decl = p.parse_fn_decl();
-        
+
         p.expect(&token::LBRACE);
 
         let ir = p.parse_expr();
-
         let src = expr_to_str(cx, ir, "inline IR must be a string literal.");
 
         p.expect(&token::RBRACE);
-        
+
         items.push(@ast::foreign_item {
             ident: fn_id,
             attrs: ~[],

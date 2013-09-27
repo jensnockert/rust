@@ -333,9 +333,9 @@ pub fn trans_foreign_mod(ccx: @mut CrateContext,
             ast::foreign_item_raw_ir(ir) => {
                 do ir.to_c_str().with_ref |c| {
                     unsafe {
-                        let result = llvm::LLVMRustAddRawIR(ccx.llmod, c);
+                        let r = llvm::LLVMRustAddRawIR(ccx.llmod, c);
 
-                        if !result {
+                        if !r {
                             let cstr = llvm::LLVMRustGetLastError();
 
                             ccx.sess.fatal(fmt!("Adding raw IR: %s",
@@ -349,14 +349,14 @@ pub fn trans_foreign_mod(ccx: @mut CrateContext,
                 let tys = foreign_types_for_id(ccx, foreign_item.id);
 
                 // Create the LLVM value for the C extern fn
-                let llfn_ty = lltype_for_fn_from_foreign_types(&tys);
+                let fn_ty = lltype_for_fn_from_foreign_types(&tys);
 
                 do name.to_c_str().with_ref |n| {
                     do ir.to_c_str().with_ref |c| {
                         unsafe {
-                            let result = llvm::LLVMRustCreateIRFunction(ccx.llmod, llfn_ty.to_ref(), n, c);
+                            let r = llvm::LLVMRustCreateIRFunction(ccx.llmod, fn_ty.to_ref(), n, c);
 
-                            if !result {
+                            if !r {
                                 let cstr = llvm::LLVMRustGetLastError();
 
                                 ccx.sess.fatal(fmt!("Adding IR function: %s",

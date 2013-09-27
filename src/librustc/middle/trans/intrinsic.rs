@@ -41,35 +41,6 @@ pub fn trans_intrinsic(ccx: @mut CrateContext,
                        ref_id: Option<ast::NodeId>) {
     debug!("trans_intrinsic(item.ident=%s)", ccx.sess.str_of(item.ident));
 
-    fn simple_llvm_intrinsic(bcx: @mut Block, name: &'static str, num_args: uint) {
-        assert!(num_args <= 4);
-        let mut args = [0 as ValueRef, ..4];
-        let first_real_arg = bcx.fcx.arg_pos(0u);
-        for i in range(0u, num_args) {
-            args[i] = get_param(bcx.fcx.llfn, first_real_arg + i);
-        }
-        let llfn = bcx.ccx().intrinsics.get_copy(&name);
-        Ret(bcx, Call(bcx, llfn, args.slice(0, num_args), []));
-    }
-
-    fn with_overflow_instrinsic(bcx: @mut Block, name: &'static str) {
-        let first_real_arg = bcx.fcx.arg_pos(0u);
-        let a = get_param(bcx.fcx.llfn, first_real_arg);
-        let b = get_param(bcx.fcx.llfn, first_real_arg + 1);
-        let llfn = bcx.ccx().intrinsics.get_copy(&name);
-
-        // convert `i1` to a `bool`, and write to the out parameter
-        let val = Call(bcx, llfn, [a, b], []);
-        let result = ExtractValue(bcx, val, 0);
-        let overflow = ZExt(bcx, ExtractValue(bcx, val, 1), Type::bool());
-        let retptr = get_param(bcx.fcx.llfn, bcx.fcx.out_arg_pos());
-        let ret = Load(bcx, retptr);
-        let ret = InsertValue(bcx, ret, result, 0);
-        let ret = InsertValue(bcx, ret, overflow, 1);
-        Store(bcx, ret, retptr);
-        RetVoid(bcx)
-    }
-
     fn memcpy_intrinsic(bcx: @mut Block, name: &'static str, tp_ty: ty::t, sizebits: u8) {
         let ccx = bcx.ccx();
         let lltp_ty = type_of::type_of(ccx, tp_ty);
@@ -110,13 +81,6 @@ pub fn trans_intrinsic(ccx: @mut CrateContext,
         let llfn = bcx.ccx().intrinsics.get_copy(&name);
         Call(bcx, llfn, [dst_ptr, val, Mul(bcx, size, count), align, volatile], []);
         RetVoid(bcx);
-    }
-
-    fn count_zeros_intrinsic(bcx: @mut Block, name: &'static str) {
-        let x = get_param(bcx.fcx.llfn, bcx.fcx.arg_pos(0u));
-        let y = C_i1(false);
-        let llfn = bcx.ccx().intrinsics.get_copy(&name);
-        Ret(bcx, Call(bcx, llfn, [x, y], []));
     }
 
     let output_type = ty::ty_fn_ret(ty::node_id_to_type(ccx.tcx, item.id));
@@ -406,87 +370,13 @@ pub fn trans_intrinsic(ccx: @mut CrateContext,
             let offset = get_param(decl, first_real_arg + 1);
             Ret(bcx, InBoundsGEP(bcx, ptr, [offset]));
         }
+
         "memcpy32" => memcpy_intrinsic(bcx, "llvm.memcpy.p0i8.p0i8.i32", substs.tys[0], 32),
         "memcpy64" => memcpy_intrinsic(bcx, "llvm.memcpy.p0i8.p0i8.i64", substs.tys[0], 64),
         "memmove32" => memcpy_intrinsic(bcx, "llvm.memmove.p0i8.p0i8.i32", substs.tys[0], 32),
         "memmove64" => memcpy_intrinsic(bcx, "llvm.memmove.p0i8.p0i8.i64", substs.tys[0], 64),
         "memset32" => memset_intrinsic(bcx, "llvm.memset.p0i8.i32", substs.tys[0], 32),
         "memset64" => memset_intrinsic(bcx, "llvm.memset.p0i8.i64", substs.tys[0], 64),
-        "sqrtf32" => simple_llvm_intrinsic(bcx, "llvm.sqrt.f32", 1),
-        "sqrtf64" => simple_llvm_intrinsic(bcx, "llvm.sqrt.f64", 1),
-        "powif32" => simple_llvm_intrinsic(bcx, "llvm.powi.f32", 2),
-        "powif64" => simple_llvm_intrinsic(bcx, "llvm.powi.f64", 2),
-        "sinf32" => simple_llvm_intrinsic(bcx, "llvm.sin.f32", 1),
-        "sinf64" => simple_llvm_intrinsic(bcx, "llvm.sin.f64", 1),
-        "cosf32" => simple_llvm_intrinsic(bcx, "llvm.cos.f32", 1),
-        "cosf64" => simple_llvm_intrinsic(bcx, "llvm.cos.f64", 1),
-        "powf32" => simple_llvm_intrinsic(bcx, "llvm.pow.f32", 2),
-        "powf64" => simple_llvm_intrinsic(bcx, "llvm.pow.f64", 2),
-        "expf32" => simple_llvm_intrinsic(bcx, "llvm.exp.f32", 1),
-        "expf64" => simple_llvm_intrinsic(bcx, "llvm.exp.f64", 1),
-        "exp2f32" => simple_llvm_intrinsic(bcx, "llvm.exp2.f32", 1),
-        "exp2f64" => simple_llvm_intrinsic(bcx, "llvm.exp2.f64", 1),
-        "logf32" => simple_llvm_intrinsic(bcx, "llvm.log.f32", 1),
-        "logf64" => simple_llvm_intrinsic(bcx, "llvm.log.f64", 1),
-        "log10f32" => simple_llvm_intrinsic(bcx, "llvm.log10.f32", 1),
-        "log10f64" => simple_llvm_intrinsic(bcx, "llvm.log10.f64", 1),
-        "log2f32" => simple_llvm_intrinsic(bcx, "llvm.log2.f32", 1),
-        "log2f64" => simple_llvm_intrinsic(bcx, "llvm.log2.f64", 1),
-        "fmaf32" => simple_llvm_intrinsic(bcx, "llvm.fma.f32", 3),
-        "fmaf64" => simple_llvm_intrinsic(bcx, "llvm.fma.f64", 3),
-        "fabsf32" => simple_llvm_intrinsic(bcx, "llvm.fabs.f32", 1),
-        "fabsf64" => simple_llvm_intrinsic(bcx, "llvm.fabs.f64", 1),
-        "floorf32" => simple_llvm_intrinsic(bcx, "llvm.floor.f32", 1),
-        "floorf64" => simple_llvm_intrinsic(bcx, "llvm.floor.f64", 1),
-        "ceilf32" => simple_llvm_intrinsic(bcx, "llvm.ceil.f32", 1),
-        "ceilf64" => simple_llvm_intrinsic(bcx, "llvm.ceil.f64", 1),
-        "truncf32" => simple_llvm_intrinsic(bcx, "llvm.trunc.f32", 1),
-        "truncf64" => simple_llvm_intrinsic(bcx, "llvm.trunc.f64", 1),
-        "ctpop8" => simple_llvm_intrinsic(bcx, "llvm.ctpop.i8", 1),
-        "ctpop16" => simple_llvm_intrinsic(bcx, "llvm.ctpop.i16", 1),
-        "ctpop32" => simple_llvm_intrinsic(bcx, "llvm.ctpop.i32", 1),
-        "ctpop64" => simple_llvm_intrinsic(bcx, "llvm.ctpop.i64", 1),
-        "ctlz8" => count_zeros_intrinsic(bcx, "llvm.ctlz.i8"),
-        "ctlz16" => count_zeros_intrinsic(bcx, "llvm.ctlz.i16"),
-        "ctlz32" => count_zeros_intrinsic(bcx, "llvm.ctlz.i32"),
-        "ctlz64" => count_zeros_intrinsic(bcx, "llvm.ctlz.i64"),
-        "cttz8" => count_zeros_intrinsic(bcx, "llvm.cttz.i8"),
-        "cttz16" => count_zeros_intrinsic(bcx, "llvm.cttz.i16"),
-        "cttz32" => count_zeros_intrinsic(bcx, "llvm.cttz.i32"),
-        "cttz64" => count_zeros_intrinsic(bcx, "llvm.cttz.i64"),
-        "bswap16" => simple_llvm_intrinsic(bcx, "llvm.bswap.i16", 1),
-        "bswap32" => simple_llvm_intrinsic(bcx, "llvm.bswap.i32", 1),
-        "bswap64" => simple_llvm_intrinsic(bcx, "llvm.bswap.i64", 1),
-
-        "i8_add_with_overflow" => with_overflow_instrinsic(bcx, "llvm.sadd.with.overflow.i8"),
-        "i16_add_with_overflow" => with_overflow_instrinsic(bcx, "llvm.sadd.with.overflow.i16"),
-        "i32_add_with_overflow" => with_overflow_instrinsic(bcx, "llvm.sadd.with.overflow.i32"),
-        "i64_add_with_overflow" => with_overflow_instrinsic(bcx, "llvm.sadd.with.overflow.i64"),
-
-        "u8_add_with_overflow" => with_overflow_instrinsic(bcx, "llvm.uadd.with.overflow.i8"),
-        "u16_add_with_overflow" => with_overflow_instrinsic(bcx, "llvm.uadd.with.overflow.i16"),
-        "u32_add_with_overflow" => with_overflow_instrinsic(bcx, "llvm.uadd.with.overflow.i32"),
-        "u64_add_with_overflow" => with_overflow_instrinsic(bcx, "llvm.uadd.with.overflow.i64"),
-
-        "i8_sub_with_overflow" => with_overflow_instrinsic(bcx, "llvm.ssub.with.overflow.i8"),
-        "i16_sub_with_overflow" => with_overflow_instrinsic(bcx, "llvm.ssub.with.overflow.i16"),
-        "i32_sub_with_overflow" => with_overflow_instrinsic(bcx, "llvm.ssub.with.overflow.i32"),
-        "i64_sub_with_overflow" => with_overflow_instrinsic(bcx, "llvm.ssub.with.overflow.i64"),
-
-        "u8_sub_with_overflow" => with_overflow_instrinsic(bcx, "llvm.usub.with.overflow.i8"),
-        "u16_sub_with_overflow" => with_overflow_instrinsic(bcx, "llvm.usub.with.overflow.i16"),
-        "u32_sub_with_overflow" => with_overflow_instrinsic(bcx, "llvm.usub.with.overflow.i32"),
-        "u64_sub_with_overflow" => with_overflow_instrinsic(bcx, "llvm.usub.with.overflow.i64"),
-
-        "i8_mul_with_overflow" => with_overflow_instrinsic(bcx, "llvm.smul.with.overflow.i8"),
-        "i16_mul_with_overflow" => with_overflow_instrinsic(bcx, "llvm.smul.with.overflow.i16"),
-        "i32_mul_with_overflow" => with_overflow_instrinsic(bcx, "llvm.smul.with.overflow.i32"),
-        "i64_mul_with_overflow" => with_overflow_instrinsic(bcx, "llvm.smul.with.overflow.i64"),
-
-        "u8_mul_with_overflow" => with_overflow_instrinsic(bcx, "llvm.umul.with.overflow.i8"),
-        "u16_mul_with_overflow" => with_overflow_instrinsic(bcx, "llvm.umul.with.overflow.i16"),
-        "u32_mul_with_overflow" => with_overflow_instrinsic(bcx, "llvm.umul.with.overflow.i32"),
-        "u64_mul_with_overflow" => with_overflow_instrinsic(bcx, "llvm.umul.with.overflow.i64"),
 
         _ => {
             // Could we make this an enum rather than a string? does it get

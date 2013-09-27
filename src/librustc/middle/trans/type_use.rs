@@ -139,6 +139,7 @@ pub fn type_uses_for(ccx: @mut CrateContext, fn_id: DefId, n_tps: uint)
             let flags = if name.starts_with("atomic_") {
                 0
             } else {
+                // would be cool to make these an enum instead of strings!
                 match name {
                     "size_of"  | "pref_align_of" | "min_align_of" |
                     "uninit"   | "init" | "transmute" | "move_val" |
@@ -153,40 +154,6 @@ pub fn type_uses_for(ccx: @mut CrateContext, fn_id: DefId, n_tps: uint)
                     "memcpy32" | "memcpy64" | "memmove32" | "memmove64" |
                     "memset32" | "memset64" => use_repr,
 
-                    "sqrtf32" | "sqrtf64" | "powif32" | "powif64" |
-                    "sinf32"  | "sinf64"  | "cosf32"  | "cosf64"  |
-                    "powf32"  | "powf64"  | "expf32"  | "expf64"  |
-                    "exp2f32" | "exp2f64" | "logf32"  | "logf64"  |
-                    "log10f32"| "log10f64"| "log2f32" | "log2f64" |
-                    "fmaf32"  | "fmaf64"  | "fabsf32" | "fabsf64" |
-                    "floorf32"| "floorf64"| "ceilf32" | "ceilf64" |
-                    "truncf32"| "truncf64" => 0,
-
-                    "ctpop8" | "ctpop16" | "ctpop32" | "ctpop64" => 0,
-
-                    "ctlz8" | "ctlz16" | "ctlz32" | "ctlz64" => 0,
-                    "cttz8" | "cttz16" | "cttz32" | "cttz64" => 0,
-
-                    "bswap16" | "bswap32" | "bswap64" => 0,
-
-
-                    "i8_add_with_overflow"  | "u8_add_with_overflow" |
-                    "i16_add_with_overflow" | "u16_add_with_overflow" |
-                    "i32_add_with_overflow" | "u32_add_with_overflow" |
-                    "i64_add_with_overflow" | "u64_add_with_overflow" => 0,
-
-                    "i8_sub_with_overflow"  | "u8_sub_with_overflow" |
-                    "i16_sub_with_overflow" | "u16_sub_with_overflow" |
-                    "i32_sub_with_overflow" | "u32_sub_with_overflow" |
-                    "i64_sub_with_overflow" | "u64_sub_with_overflow" => 0,
-
-                    "i8_mul_with_overflow"  | "u8_mul_with_overflow" |
-                    "i16_mul_with_overflow" | "u16_mul_with_overflow" |
-                    "i32_mul_with_overflow" | "u32_mul_with_overflow" |
-                    "i64_mul_with_overflow" | "u64_mul_with_overflow" => 0,
-
-                    // would be cool to make these an enum instead of
-                    // strings!
                     _ => fail!("unknown intrinsic in type_use")
                 }
             };

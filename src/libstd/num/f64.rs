@@ -25,6 +25,7 @@ pub use cmath::c_double_targ_consts::*;
 pub use cmp::{min, max};
 
 use self::delegated::*;
+use self::unsafe_delegated::*;
 
 macro_rules! delegate(
     (
@@ -39,16 +40,38 @@ macro_rules! delegate(
         // An inner module is required to get the #[inline] attribute on the
         // functions.
         mod delegated {
-            use cmath::c_double_utils;
-            use libc::{c_double, c_int};
             use unstable::intrinsics;
 
             $(
                 #[inline] #[fixed_stack_segment] #[inline(never)]
                 pub fn $name($( $arg : $arg_ty ),*) -> $rv {
-                    unsafe {
-                        $bound_name($( $arg ),*)
-                    }
+                    $bound_name($( $arg ),*)
+                }
+            )*
+        }
+    )
+)
+
+macro_rules! delegate_unsafe(
+    (
+        $(
+            fn $name:ident(
+                $(
+                    $arg:ident : $arg_ty:ty
+                ),*
+            ) -> $rv:ty = $bound_name:path
+        ),*
+    ) => (
+        // An inner module is required to get the #[inline] attribute on the
+        // functions.
+        mod unsafe_delegated {
+            use cmath::c_double_utils;
+            use libc::{c_double, c_int};
+
+            $(
+                #[inline] #[fixed_stack_segment] #[inline(never)]
+                pub fn $name($( $arg : $arg_ty ),*) -> $rv {
+                    unsafe { $bound_name($( $arg ),*) }
                 }
             )*
         }
@@ -67,20 +90,18 @@ delegate!(
     fn log2(n: f64) -> f64 = intrinsics::log2f64,
     fn mul_add(a: f64, b: f64, c: f64) -> f64 = intrinsics::fmaf64,
     fn pow(n: f64, e: f64) -> f64 = intrinsics::powf64,
-    fn powi(n: f64, e: c_int) -> f64 = intrinsics::powif64,
+    fn powi(n: f64, e: i32) -> f64 = intrinsics::powif64,
     fn sin(n: f64) -> f64 = intrinsics::sinf64,
     fn sqrt(n: f64) -> f64 = intrinsics::sqrtf64,
-
-    // LLVM 3.3 required to use intrinsics for these four
-    fn ceil(n: c_double) -> c_double = c_double_utils::ceil,
-    fn trunc(n: c_double) -> c_double = c_double_utils::trunc,
-    /*
     fn ceil(n: f64) -> f64 = intrinsics::ceilf64,
-    fn trunc(n: f64) -> f64 = intrinsics::truncf64,
+    fn trunc(n: f64) -> f64 = intrinsics::truncf64
+)
+    /*
     fn rint(n: c_double) -> c_double = intrinsics::rintf64,
     fn nearbyint(n: c_double) -> c_double = intrinsics::nearbyintf64,
     */
 
+delegate_unsafe!(
     // cmath
     fn acos(n: c_double) -> c_double = c_double_utils::acos,
     fn asin(n: c_double) -> c_double = c_double_utils::asin,

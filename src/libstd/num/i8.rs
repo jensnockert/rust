@@ -21,43 +21,37 @@ int_module!(i8, 8)
 impl BitCount for i8 {
     /// Counts the number of bits set. Wraps LLVM's `ctpop` intrinsic.
     #[inline]
-    fn population_count(&self) -> i8 { unsafe { intrinsics::ctpop8(*self) } }
+    fn population_count(&self) -> i8 { intrinsics::ctpop8(*self) }
 
     /// Counts the number of leading zeros. Wraps LLVM's `ctlz` intrinsic.
     #[inline]
-    fn leading_zeros(&self) -> i8 { unsafe { intrinsics::ctlz8(*self) } }
+    fn leading_zeros(&self) -> i8 { intrinsics::ctlz8(*self) }
 
     /// Counts the number of trailing zeros. Wraps LLVM's `cttz` intrinsic.
     #[inline]
-    fn trailing_zeros(&self) -> i8 { unsafe { intrinsics::cttz8(*self) } }
+    fn trailing_zeros(&self) -> i8 { intrinsics::cttz8(*self) }
 }
 
 impl CheckedAdd for i8 {
     #[inline]
     fn checked_add(&self, v: &i8) -> Option<i8> {
-        unsafe {
-            let (x, y) = intrinsics::i8_add_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i8_add_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }
 
 impl CheckedSub for i8 {
     #[inline]
     fn checked_sub(&self, v: &i8) -> Option<i8> {
-        unsafe {
-            let (x, y) = intrinsics::i8_sub_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i8_sub_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }
 
 impl CheckedMul for i8 {
     #[inline]
     fn checked_mul(&self, v: &i8) -> Option<i8> {
-        unsafe {
-            let (x, y) = intrinsics::i8_mul_with_overflow(*self, *v);
-            if y { None } else { Some(x) }
-        }
+        let (x, y) = intrinsics::i8_mul_with_overflow(*self, *v);
+        if y { None } else { Some(x) }
     }
 }
